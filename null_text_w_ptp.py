@@ -407,7 +407,7 @@ class NullInversion:
         noise_pred = self.model.unet(latents, t, encoder_hidden_states=context)["sample"]
         return noise_pred
 
-    def get_noise_pred(self, latents, t, is_forward=True, context=None):
+    def get_noise_pred(self, latents, t, is_forward=True, context=None, noise=False):
         latents_input = torch.cat([latents] * 2)
         if context is None:
             context = self.context
@@ -419,7 +419,11 @@ class NullInversion:
             latents = self.next_step(noise_pred, t, latents)
         else:
             latents = self.prev_step(noise_pred, t, latents)
-        return latents
+
+        if noise:
+            return latents, noise_pred
+        else:
+            return latents
 
     @torch.no_grad()
     def latent2image(self, latents, return_type='np'):
@@ -492,6 +496,9 @@ class NullInversion:
         uncond_embeddings_list = []
         latent_cur = torch.randn(1, 4, 64, 64).to(device)
         bar = tqdm(total=num_inner_steps * NUM_DDIM_STEPS)
+        mask = torch.ones(image.shape).to(device)
+        mask[:, :, 512 // 4:3 * 512 // 4, 512 // 4:3 * 512 // 4] = 0.
+
         for i in range(NUM_DDIM_STEPS):
             print(i)
             uncond_embeddings = uncond_embeddings.clone().detach()
@@ -511,8 +518,6 @@ class NullInversion:
                 latent_pred = 1 / 0.18215 * latent_pred
 
                 image = self.model.vae.decode(latent_pred)['sample']
-                mask = torch.ones(image.shape).to(device)
-                mask[:, :, 512//4:3*512//4, 512//4:3*512//4] = 0.
 
                 y_hat = image * mask
 
@@ -524,11 +529,6 @@ class NullInversion:
                 optimizer.step()
                 loss_item = loss.item()
                 print(loss_item)
-                new_im = mask * y + (1 - mask) * image
-                self.model.vae.encode(new_im)
-                latent_cur = self.model.vae.encode(new_im)['latent_dist'].mean
-                latent_cur = latent_cur * 0.18215
-                latent_cur = latent_cur * alpha_prod_t ** 0.5 + beta_prod_t ** 0.5 * noise_pred
                 bar.update()
                 if loss_item < epsilon + i * 2e-5:
                     break
@@ -536,8 +536,27 @@ class NullInversion:
                 bar.update()
             uncond_embeddings_list.append(uncond_embeddings[:1].detach())
             with torch.no_grad():
+                latent_cur, noise_pred = self.get_noise_pred(latent_cur, t, False, context)
+                if i == NUM_DDIM_STEPS - 1:
+                    latent_pred = 1 / 0.18215 * latent_cur
+                else:
+                    alpha_prod_t = self.scheduler.alphas_cumprod[self.model.scheduler.timesteps[i+1]]
+                    beta_prod_t = 1 - alpha_prod_t
+                    latent_pred = (latent_cur - beta_prod_t ** 0.5 * noise_pred) / alpha_prod_t ** 0.5
+                    latent_pred = 1 / 0.18215 * latent_pred
+
+                image = self.model.vae.decode(latent_pred)['sample']
+
+                new_im = mask * y + (1 - mask) * image
+                latent_cur = self.model.vae.encode(new_im)['latent_dist'].mean
+                latent_cur = latent_cur * 0.18215
+                if i < NUM_DDIM_STEPS - 1:
+                    alpha_prod_t = self.scheduler.alphas_cumprod[self.model.scheduler.timesteps[i + 1]]
+                    beta_prod_t = 1 - alpha_prod_t
+                    latent_cur = latent_cur * alpha_prod_t ** 0.5 + beta_prod_t ** 0.5 * noise_pred
+
                 context = torch.cat([uncond_embeddings, cond_embeddings])
-                latent_cur = self.get_noise_pred(latent_cur, t, False, context)
+
         bar.close()
         return uncond_embeddings_list, self.latent2image(latent_cur)
 
