@@ -178,7 +178,26 @@ def register_attention_control(model, controller):
         else:
             to_out = self.to_out
 
-        def forward(x, context=None, mask=None):
+        def reshape_heads_to_batch_dim(self, tensor):
+            batch_size, seq_len, dim = tensor.shape
+            head_size = self.heads
+            tensor = tensor.reshape(batch_size, seq_len, head_size, dim // head_size)
+            tensor = tensor.permute(0, 2, 1, 3).reshape(batch_size * head_size, seq_len, dim // head_size)
+            return tensor
+
+        def reshape_batch_dim_to_heads(self, tensor):
+            batch_size, seq_len, dim = tensor.shape
+            head_size = self.heads
+            tensor = tensor.reshape(batch_size // head_size, head_size, seq_len, dim)
+            tensor = tensor.permute(0, 2, 1, 3).reshape(batch_size // head_size, seq_len, dim * head_size)
+            return tensor
+
+        # def forward(x, context=None, mask=None):
+        def forward(hidden_states, encoder_hidden_states=None, attention_mask=None, **cross_attention_kwargs):
+            x = hidden_states
+            context = encoder_hidden_states
+            mask = attention_mask
+
             batch_size, sequence_length, dim = x.shape
             h = self.heads
             q = self.to_q(x)
@@ -186,9 +205,9 @@ def register_attention_control(model, controller):
             context = context if is_cross else x
             k = self.to_k(context)
             v = self.to_v(context)
-            q = self.reshape_heads_to_batch_dim(q)
-            k = self.reshape_heads_to_batch_dim(k)
-            v = self.reshape_heads_to_batch_dim(v)
+            q = reshape_heads_to_batch_dim(self, q)
+            k = reshape_heads_to_batch_dim(self, k)
+            v = reshape_heads_to_batch_dim(self, v)
 
             sim = torch.einsum("b i d, b j d -> b i j", q, k) * self.scale
 
@@ -202,7 +221,7 @@ def register_attention_control(model, controller):
             attn = sim.softmax(dim=-1)
             attn = controller(attn, is_cross, place_in_unet)
             out = torch.einsum("b i j, b j d -> b i d", attn, v)
-            out = self.reshape_batch_dim_to_heads(out)
+            out = reshape_batch_dim_to_heads(self, out)
             return to_out(out)
 
         return forward
@@ -218,13 +237,16 @@ def register_attention_control(model, controller):
     if controller is None:
         controller = DummyController()
 
-    def register_recr(net_, count, place_in_unet):
-        if net_.__class__.__name__ == 'CrossAttention':
+    def register_recr(net_, count, place_in_unet, module_name=None):
+        # if net_.__class__.__name__ == 'CrossAttention':
+        #     net_.forward = ca_forward(net_, place_in_unet)
+        #     return count + 1
+        if module_name in ["attn1", "attn2"]:
             net_.forward = ca_forward(net_, place_in_unet)
             return count + 1
         elif hasattr(net_, 'children'):
-            for net__ in net_.children():
-                count = register_recr(net__, count, place_in_unet)
+            for k, net__ in net_.named_children():
+                count = register_recr(net__, count, place_in_unet, module_name=k)
         return count
 
     cross_att_count = 0
@@ -238,7 +260,6 @@ def register_attention_control(model, controller):
             cross_att_count += register_recr(net[1], 0, "mid")
 
     controller.num_att_layers = cross_att_count
-
     
 def get_word_inds(text: str, word_place: int, tokenizer):
     split_text = text.split(" ")
