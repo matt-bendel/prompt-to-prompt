@@ -493,6 +493,7 @@ class NullInversion:
         latent_cur = torch.randn(1, 4, 64, 64).to(device)
         bar = tqdm(total=num_inner_steps * NUM_DDIM_STEPS)
         for i in range(NUM_DDIM_STEPS):
+            print(i)
             uncond_embeddings = uncond_embeddings.clone().detach()
             uncond_embeddings.requires_grad = True
             optimizer = Adam([uncond_embeddings], lr=1e-2 * (1. - i / 100.))
@@ -640,7 +641,7 @@ def run_and_display(prompts, controller, latent=None, run_baseline=False, genera
     return images, x_t
 
 image_path = "./example_images/gnochi_mirror.jpeg"
-prompt = "a cat sitting next to a mirror"
+prompt = "a cat"
 (image_gt, image_enc), x_t, uncond_embeddings = null_inversion.invert(image_path, prompt, offsets=(0,0,200,0), verbose=True)
 
 print("Modify or remove offsets according to your image!")
@@ -648,8 +649,10 @@ print("Modify or remove offsets according to your image!")
 prompts = [prompt]
 controller = AttentionStore()
 image_inv, x_t = run_and_display(prompts, controller, run_baseline=False, latent=x_t, uncond_embeddings=uncond_embeddings, verbose=False)
+image_inv2, _ = run_and_display(prompts, controller, run_baseline=False, latent=x_t, uncond_embeddings=uncond_embeddings, verbose=False)
+
 print("showing from left to right: the ground truth image, the vq-autoencoder reconstruction, the null-text inverted image")
-ptp_utils.view_images([image_gt, image_enc, image_inv[0]])
+ptp_utils.view_images([image_gt, image_enc, image_inv[0], image_inv2[0]])
 
 exit()
 prompts = ["a cat sitting next to a mirror",
