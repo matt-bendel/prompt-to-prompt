@@ -490,7 +490,7 @@ class NullInversion:
     def null_optimization(self, y, num_inner_steps, epsilon):
         uncond_embeddings, cond_embeddings = self.context.chunk(2)
         uncond_embeddings_list = []
-        latent_cur = torch.randn(1, 4, 64, 64)
+        latent_cur = torch.randn(1, 4, 64, 64).to(device)
         bar = tqdm(total=num_inner_steps * NUM_DDIM_STEPS)
         for i in range(NUM_DDIM_STEPS):
             uncond_embeddings = uncond_embeddings.clone().detach()
@@ -512,8 +512,6 @@ class NullInversion:
 
                 y_hat = image * mask
 
-                print(y_hat.device)
-                print(y.device)
                 # latents_prev_rec = self.prev_step(noise_pred, t, latent_cur)
 
                 loss = nnf.mse_loss(y_hat, y)
