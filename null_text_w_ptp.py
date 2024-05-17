@@ -11,14 +11,16 @@ import shutil
 from torch.optim.adam import Adam
 from PIL import Image
 
-scheduler = DDIMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", clip_sample=False, set_alpha_to_one=False)
+scheduler = DDIMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", clip_sample=False,
+                          set_alpha_to_one=False)
 MY_TOKEN = ''
 LOW_RESOURCE = False
 NUM_DDIM_STEPS = 50
 GUIDANCE_SCALE = 7.5
 MAX_NUM_WORDS = 77
 device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
-ldm_stable = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4", scheduler=scheduler, from_tf=False).to(device)
+ldm_stable = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4", scheduler=scheduler,
+                                                     from_tf=False).to(device)
 # try:
 #     ldm_stable.disable_xformers_memory_efficient_attention()
 # except AttributeError:
@@ -211,7 +213,7 @@ class AttentionControlEdit(AttentionStore, abc.ABC):
             if is_cross:
                 alpha_words = self.cross_replace_alpha[self.cur_step]
                 attn_repalce_new = self.replace_cross_attention(attn_base, attn_repalce) * alpha_words + (
-                            1 - alpha_words) * attn_repalce
+                        1 - alpha_words) * attn_repalce
                 attn[1:] = attn_repalce_new
             else:
                 attn[1:] = self.replace_self_attention(attn_base, attn_repalce, place_in_unet)
@@ -500,6 +502,7 @@ class NullInversion:
             mask = torch.ones(y.shape).to(device)
             mask[:, :, 512 // 4:3 * 512 // 4, 512 // 4:3 * 512 // 4] = 0.
 
+        last_y_hat = None
         for i in range(NUM_DDIM_STEPS):
             print(i)
             uncond_embeddings = uncond_embeddings.clone().detach()
@@ -524,7 +527,7 @@ class NullInversion:
 
                 # latents_prev_rec = self.prev_step(noise_pred, t, latent_cur)
 
-                loss = nnf.mse_loss(y_hat, y)
+                loss = nnf.l1_loss(y_hat, y)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -540,25 +543,26 @@ class NullInversion:
                 context = torch.cat([uncond_embeddings, cond_embeddings])
                 latent_cur, noise_pred = self.get_noise_pred(latent_cur, t, False, context, True)
 
-                prev_timestep = t - self.scheduler.config.num_train_timesteps // self.scheduler.num_inference_steps
-                alpha_prod_t_prev = self.scheduler.alphas_cumprod[prev_timestep] if prev_timestep >= 0 else self.scheduler.final_alpha_cumprod
-                beta_prod_t_prev = 1 - alpha_prod_t_prev
-
-                if i == NUM_DDIM_STEPS - 1:
-                    latent_pred = 1 / 0.18215 * latent_cur
-                else:
-                    latent_pred = (latent_cur - beta_prod_t_prev ** 0.5 * noise_pred) / alpha_prod_t_prev ** 0.5
-                    latent_pred = 1 / 0.18215 * latent_pred
-
-                if i < NUM_DDIM_STEPS - 1:
-                    image = self.model.vae.decode(latent_pred)['sample']
-
-                    new_im = mask * y + (1 - mask) * image
-                    latent_cur = self.model.vae.encode(new_im)['latent_dist'].mean
-                    latent_cur = latent_cur * 0.18215
-                    latent_cur = latent_cur * alpha_prod_t_prev ** 0.5 + beta_prod_t_prev ** 0.5 * noise_pred
-                else:
-                    latent_cur = latent_pred * 0.18215
+                # prev_timestep = t - self.scheduler.config.num_train_timesteps // self.scheduler.num_inference_steps
+                # alpha_prod_t_prev = self.scheduler.alphas_cumprod[
+                #     prev_timestep] if prev_timestep >= 0 else self.scheduler.final_alpha_cumprod
+                # beta_prod_t_prev = 1 - alpha_prod_t_prev
+                #
+                # if i == NUM_DDIM_STEPS - 1:
+                #     latent_pred = 1 / 0.18215 * latent_cur
+                # else:
+                #     latent_pred = (latent_cur - beta_prod_t_prev ** 0.5 * noise_pred) / alpha_prod_t_prev ** 0.5
+                #     latent_pred = 1 / 0.18215 * latent_pred
+                #
+                # if i < NUM_DDIM_STEPS - 1:
+                #     image = self.model.vae.decode(latent_pred)['sample']
+                #
+                #     new_im = y + (1 - mask) * image
+                #     latent_cur = self.model.vae.encode(new_im)['latent_dist'].mean
+                #     latent_cur = latent_cur * 0.18215
+                #     latent_cur = latent_cur * alpha_prod_t_prev ** 0.5 + beta_prod_t_prev ** 0.5 * noise_pred
+                # else:
+                #     latent_cur = latent_pred * 0.18215
 
         bar.close()
         return uncond_embeddings_list, self.latent2image(latent_cur)
@@ -575,7 +579,7 @@ class NullInversion:
 
         y = torch.from_numpy(image_gt).float() / 127.5 - 1
         y = y.permute(2, 0, 1).unsqueeze(0).to(device)
-        y[:, :, 512//4:3*512//4, 512//4:3*512//4] = 0. # y
+        y[:, :, 512 // 4:3 * 512 // 4, 512 // 4:3 * 512 // 4] = 0.  # y
 
         if verbose:
             print("DDIM inversion...")
@@ -645,7 +649,8 @@ def text2image_ldm_stable(
             context = torch.cat([uncond_embeddings[i].expand(*text_embeddings.shape), text_embeddings])
         else:
             context = torch.cat([uncond_embeddings_, text_embeddings])
-        latents = ptp_utils.diffusion_step(model, controller, latents, context, t, guidance_scale, low_resource=False, y=y)
+        latents = ptp_utils.diffusion_step(model, controller, latents, context, t, guidance_scale, low_resource=False,
+                                           y=y)
 
     if return_type == 'image':
         image = ptp_utils.latent2image(model.vae, latents)
@@ -668,20 +673,27 @@ def run_and_display(prompts, controller, latent=None, run_baseline=False, genera
         ptp_utils.view_images(images)
     return images, x_t
 
+
 image_path = "./example_images/gnochi_mirror.jpeg"
 prompt = "a cat"
-(image_gt, image_enc, img_1), x_t, uncond_embeddings = null_inversion.invert(image_path, prompt, offsets=(0,0,200,0), verbose=True)
+(image_gt, image_enc, img_1), x_t, uncond_embeddings = null_inversion.invert(image_path, prompt, offsets=(0, 0, 200, 0),
+                                                                             verbose=True)
 
 print("Modify or remove offsets according to your image!")
 
 prompts = [prompt]
 controller = AttentionStore()
-image_inv, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device), uncond_embeddings=uncond_embeddings, verbose=False, y=image_gt)
-image_inv2, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device), uncond_embeddings=uncond_embeddings, verbose=False, y=image_gt)
-image_inv3, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device), uncond_embeddings=uncond_embeddings, verbose=False, y=image_gt)
-image_inv4, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device), uncond_embeddings=uncond_embeddings, verbose=False, y=image_gt)
+image_inv, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device),
+                               uncond_embeddings=uncond_embeddings, verbose=False, y=image_gt)
+image_inv2, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device),
+                                uncond_embeddings=uncond_embeddings, verbose=False, y=image_gt)
+image_inv3, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device),
+                                uncond_embeddings=uncond_embeddings, verbose=False, y=image_gt)
+image_inv4, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device),
+                                uncond_embeddings=uncond_embeddings, verbose=False, y=image_gt)
 
-print("showing from left to right: the ground truth image, the vq-autoencoder reconstruction, the null-text inverted image")
+print(
+    "showing from left to right: the ground truth image, the vq-autoencoder reconstruction, the null-text inverted image")
 ptp_utils.view_images([image_gt, image_enc, img_1, image_inv[0], image_inv2[0], image_inv3[0], image_inv4[0]])
 
 exit()
