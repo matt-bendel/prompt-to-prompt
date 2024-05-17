@@ -504,15 +504,16 @@ class NullInversion:
                 noise_pred_uncond = self.get_noise_pred_single(latent_cur, t, uncond_embeddings)
                 noise_pred = noise_pred_uncond + GUIDANCE_SCALE * (noise_pred_cond - noise_pred_uncond)
 
-                latent_pred = latent_cur - noise_pred
+                alpha_prod_t = self.scheduler.alphas_cumprod[timestep]
+                beta_prod_t = 1 - alpha_prod_t
+                latent_pred = (latent_cur - beta_prod_t ** 0.5 * noise_pred) / alpha_prod_t ** 0.5
                 latent_pred = 1 / 0.18215 * latent_pred
+
                 image = self.model.vae.decode(latent_pred)['sample']
                 mask = torch.ones(image.shape).to(device)
                 mask[:, :, 512//4:3*512//4, 512//4:3*512//4] = 0.
 
                 y_hat = image * mask
-
-                # latents_prev_rec = self.prev_step(noise_pred, t, latent_cur)
 
                 loss = nnf.mse_loss(y_hat, y)
                 optimizer.zero_grad()
