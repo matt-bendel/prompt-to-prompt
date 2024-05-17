@@ -516,10 +516,6 @@ class NullInversion:
 
                 y_hat = image * mask
 
-                print(y.max())
-                print(y_hat.max())
-                exit()
-
                 # latents_prev_rec = self.prev_step(noise_pred, t, latent_cur)
 
                 loss = nnf.l1_loss(y_hat, y)
