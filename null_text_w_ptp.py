@@ -487,10 +487,10 @@ class NullInversion:
         ddim_latents = self.ddim_loop(latent)
         return image_rec, ddim_latents
 
-    def null_optimization(self, latents, num_inner_steps, epsilon):
+    def null_optimization(self, y, num_inner_steps, epsilon):
         uncond_embeddings, cond_embeddings = self.context.chunk(2)
         uncond_embeddings_list = []
-        latent_cur = latents[-1]
+        latent_cur = torch.randn(1, 4, 64, 64)
         bar = tqdm(total=num_inner_steps * NUM_DDIM_STEPS)
         for i in range(NUM_DDIM_STEPS):
             uncond_embeddings = uncond_embeddings.clone().detach()
@@ -503,8 +503,17 @@ class NullInversion:
             for j in range(num_inner_steps):
                 noise_pred_uncond = self.get_noise_pred_single(latent_cur, t, uncond_embeddings)
                 noise_pred = noise_pred_uncond + GUIDANCE_SCALE * (noise_pred_cond - noise_pred_uncond)
-                latents_prev_rec = self.prev_step(noise_pred, t, latent_cur)
-                loss = nnf.mse_loss(latents_prev_rec, latent_prev)
+
+                latent_pred = latent_cur - noise_pred
+                latent_pred = 1 / 0.18215 * latent_pred
+                image = self.model.vae.decode(latent_pred)['sample']
+                mask = torch.ones(image.shape).to(device)
+                mask[:, :, 512//4:3*512//4, 512//4:3*512//4] = 0.
+
+                y_hat = image * mask
+                # latents_prev_rec = self.prev_step(noise_pred, t, latent_cur)
+
+                loss = nnf.mse_loss(y_hat, y)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -527,13 +536,26 @@ class NullInversion:
         ptp_utils.register_attention_control(self.model, None)
         image_gt = load_512(image_path, *offsets)
         # mask = torch.ones(image_gt.shape)
+        print(image_gt.shape)
+        # y = image_gt
+        # y[512//4:3*512//4, 512//4:3*512//4, :] = 0
+
+        y = torch.from_numpy(image_gt).float() / 127.5 - 1
+        y = image.permute(2, 0, 1).unsqueeze(0).to(device)
+        y[:, :, 512//4:3*512//4, 512//4:3*512//4] = 0. # y
+
 
         if verbose:
             print("DDIM inversion...")
-        image_rec, ddim_latents = self.ddim_inversion(image_gt)
+        _, ddim_latents = self.ddim_inversion(image_gt)
         if verbose:
             print("Null-text optimization...")
-        uncond_embeddings = self.null_optimization(ddim_latents, num_inner_steps, early_stop_epsilon)
+        uncond_embeddings = self.null_optimization(y, num_inner_steps, early_stop_epsilon)
+
+        image_rec = (y / 2 + 0.5).clamp(0, 1)
+        image_rec = image_rec.cpu().permute(0, 2, 3, 1).numpy()[0]
+        image_rec = (image_rec * 255).astype(np.uint8)
+
         return (image_gt, image_rec), ddim_latents[-1], uncond_embeddings
 
     def __init__(self, model):
