@@ -496,7 +496,7 @@ class NullInversion:
             uncond_embeddings = uncond_embeddings.clone().detach()
             uncond_embeddings.requires_grad = True
             optimizer = Adam([uncond_embeddings], lr=1e-2 * (1. - i / 100.))
-            latent_prev = latents[len(latents) - i - 2]
+            # latent_prev = latents[len(latents) - i - 2]
             t = self.model.scheduler.timesteps[i]
             with torch.no_grad():
                 noise_pred_cond = self.get_noise_pred_single(latent_cur, t, cond_embeddings)
