@@ -537,7 +537,7 @@ class NullInversion:
             uncond_embeddings_list.append(uncond_embeddings[:1].detach())
             with torch.no_grad():
                 context = torch.cat([uncond_embeddings, cond_embeddings])
-                latent_cur, noise_pred = self.get_noise_pred(latent_cur, t, False, context)
+                latent_cur, noise_pred = self.get_noise_pred(latent_cur, t, False, context, True)
                 if i == NUM_DDIM_STEPS - 1:
                     latent_pred = 1 / 0.18215 * latent_cur
                 else:
