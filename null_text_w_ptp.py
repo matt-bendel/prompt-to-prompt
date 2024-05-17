@@ -621,3 +621,15 @@ controller = AttentionStore()
 image_inv, x_t = run_and_display(prompts, controller, run_baseline=False, latent=x_t, uncond_embeddings=uncond_embeddings, verbose=False)
 print("showing from left to right: the ground truth image, the vq-autoencoder reconstruction, the null-text inverted image")
 ptp_utils.view_images([image_gt, image_enc, image_inv[0]])
+
+prompts = ["a cat sitting next to a mirror",
+           "a cat sitting next to a tree"
+        ]
+
+cross_replace_steps = {'default_': .8,}
+self_replace_steps = .5
+blend_word = ((('mirror',), ("tree",))) # for local edit. If it is not local yet - use only the source object: blend_word = ((('cat',), ("cat",))).
+eq_params = {"words": ("tree",), "values": (2,)} # amplify attention to the word "tiger" by *2
+
+controller = make_controller(prompts, True, cross_replace_steps, self_replace_steps, blend_word, eq_params)
+images, _ = run_and_display(prompts, controller, run_baseline=False, latent=x_t, uncond_embeddings=uncond_embeddings)
