@@ -19,10 +19,10 @@ GUIDANCE_SCALE = 7.5
 MAX_NUM_WORDS = 77
 device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
 ldm_stable = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4", scheduler=scheduler, from_tf=False).to(device)
-try:
-    ldm_stable.disable_xformers_memory_efficient_attention()
-except AttributeError:
-    print("Attribute disable_xformers_memory_efficient_attention() is missing")
+# try:
+#     ldm_stable.disable_xformers_memory_efficient_attention()
+# except AttributeError:
+#     print("Attribute disable_xformers_memory_efficient_attention() is missing")
 tokenizer = ldm_stable.tokenizer
 
 
