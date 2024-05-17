@@ -519,6 +519,7 @@ class NullInversion:
                 loss.backward()
                 optimizer.step()
                 loss_item = loss.item()
+                print(loss_item)
                 bar.update()
                 if loss_item < epsilon + i * 2e-5:
                     break
