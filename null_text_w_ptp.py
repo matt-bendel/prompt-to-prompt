@@ -496,7 +496,7 @@ class NullInversion:
         uncond_embeddings_list = []
         latent_cur = torch.randn(1, 4, 64, 64).to(device)
         bar = tqdm(total=num_inner_steps * NUM_DDIM_STEPS)
-        mask = torch.ones(image.shape).to(device)
+        mask = torch.ones(y.shape).to(device)
         mask[:, :, 512 // 4:3 * 512 // 4, 512 // 4:3 * 512 // 4] = 0.
 
         for i in range(NUM_DDIM_STEPS):
