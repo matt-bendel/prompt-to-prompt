@@ -541,9 +541,8 @@ class NullInversion:
         # y[512//4:3*512//4, 512//4:3*512//4, :] = 0
 
         y = torch.from_numpy(image_gt).float() / 127.5 - 1
-        y = image.permute(2, 0, 1).unsqueeze(0).to(device)
+        y = y.permute(2, 0, 1).unsqueeze(0).to(device)
         y[:, :, 512//4:3*512//4, 512//4:3*512//4] = 0. # y
-
 
         if verbose:
             print("DDIM inversion...")
