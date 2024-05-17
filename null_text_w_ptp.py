@@ -516,6 +516,10 @@ class NullInversion:
 
                 y_hat = image * mask
 
+                print(y.max())
+                print(y_hat.max())
+                exit()
+
                 # latents_prev_rec = self.prev_step(noise_pred, t, latent_cur)
 
                 loss = nnf.l1_loss(y_hat, y)
@@ -534,7 +538,7 @@ class NullInversion:
                 context = torch.cat([uncond_embeddings, cond_embeddings])
                 latent_cur = self.get_noise_pred(latent_cur, t, False, context)
         bar.close()
-        return uncond_embeddings_list
+        return uncond_embeddings_list, self.latent2image(latent_cur)
 
     def invert(self, image_path: str, prompt: str, offsets=(0, 0, 0, 0), num_inner_steps=10, early_stop_epsilon=1e-5,
                verbose=False):
@@ -555,13 +559,13 @@ class NullInversion:
         _, ddim_latents = self.ddim_inversion(image_gt)
         if verbose:
             print("Null-text optimization...")
-        uncond_embeddings = self.null_optimization(y, num_inner_steps, early_stop_epsilon)
+        uncond_embeddings, im = self.null_optimization(y, num_inner_steps, early_stop_epsilon)
 
         image_rec = (y / 2 + 0.5).clamp(0, 1)
         image_rec = image_rec.cpu().permute(0, 2, 3, 1).numpy()[0]
         image_rec = (image_rec * 255).astype(np.uint8)
 
-        return (image_gt, image_rec), ddim_latents[-1], uncond_embeddings
+        return (image_gt, image_rec, im), ddim_latents[-1], uncond_embeddings
 
     def __init__(self, model):
         scheduler = DDIMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", clip_sample=False,
@@ -642,27 +646,16 @@ def run_and_display(prompts, controller, latent=None, run_baseline=False, genera
 
 image_path = "./example_images/gnochi_mirror.jpeg"
 prompt = "a cat"
-(image_gt, image_enc), x_t, uncond_embeddings = null_inversion.invert(image_path, prompt, offsets=(0,0,200,0), verbose=True)
+(image_gt, image_enc, img_1), x_t, uncond_embeddings = null_inversion.invert(image_path, prompt, offsets=(0,0,200,0), verbose=True)
 
 print("Modify or remove offsets according to your image!")
 
 prompts = [prompt]
 controller = AttentionStore()
-image_inv, x_t = run_and_display(prompts, controller, run_baseline=False, latent=x_t, uncond_embeddings=uncond_embeddings, verbose=False)
-image_inv2, _ = run_and_display(prompts, controller, run_baseline=False, latent=x_t, uncond_embeddings=uncond_embeddings, verbose=False)
+image_inv, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device), uncond_embeddings=uncond_embeddings, verbose=False)
+image_inv2, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device), uncond_embeddings=uncond_embeddings, verbose=False)
 
 print("showing from left to right: the ground truth image, the vq-autoencoder reconstruction, the null-text inverted image")
-ptp_utils.view_images([image_gt, image_enc, image_inv[0], image_inv2[0]])
+ptp_utils.view_images([image_gt, image_enc, img_1, image_inv[0], image_inv2[0]])
 
 exit()
-prompts = ["a cat sitting next to a mirror",
-           "a cat sitting next to a tree"
-        ]
-
-cross_replace_steps = {'default_': .8,}
-self_replace_steps = .5
-blend_word = ((('mirror',), ("tree",))) # for local edit. If it is not local yet - use only the source object: blend_word = ((('cat',), ("cat",))).
-eq_params = {"words": ("tree",), "values": (2,)} # amplify attention to the word "tiger" by *2
-
-controller = make_controller(prompts, True, cross_replace_steps, self_replace_steps, blend_word, eq_params)
-images, _ = run_and_display(prompts, controller, run_baseline=False, latent=x_t, uncond_embeddings=uncond_embeddings)
