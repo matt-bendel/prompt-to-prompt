@@ -537,12 +537,12 @@ class NullInversion:
             uncond_embeddings_list.append(uncond_embeddings[:1].detach())
             with torch.no_grad():
                 context = torch.cat([uncond_embeddings, cond_embeddings])
-                latent_cur, noise_pred = self.get_noise_pred(latent_cur, t, False, context, True)
+                alpha_prod_t = self.scheduler.alphas_cumprod[t]
+                beta_prod_t = 1 - alpha_prod_t
+
                 if i == NUM_DDIM_STEPS - 1:
                     latent_pred = 1 / 0.18215 * latent_cur
                 else:
-                    alpha_prod_t = self.scheduler.alphas_cumprod[self.model.scheduler.timesteps[i+1]]
-                    beta_prod_t = 1 - alpha_prod_t
                     latent_pred = (latent_cur - beta_prod_t ** 0.5 * noise_pred) / alpha_prod_t ** 0.5
                     latent_pred = 1 / 0.18215 * latent_pred
 
@@ -552,9 +552,9 @@ class NullInversion:
                 latent_cur = self.model.vae.encode(new_im)['latent_dist'].mean
                 latent_cur = latent_cur * 0.18215
                 if i < NUM_DDIM_STEPS - 1:
-                    alpha_prod_t = self.scheduler.alphas_cumprod[self.model.scheduler.timesteps[i + 1]]
-                    beta_prod_t = 1 - alpha_prod_t
                     latent_cur = latent_cur * alpha_prod_t ** 0.5 + beta_prod_t ** 0.5 * noise_pred
+
+                latent_cur, noise_pred = self.get_noise_pred(latent_cur, t, False, context, True)
 
 
         bar.close()
