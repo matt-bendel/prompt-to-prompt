@@ -511,6 +511,9 @@ class NullInversion:
                 mask[:, :, 512//4:3*512//4, 512//4:3*512//4] = 0.
 
                 y_hat = image * mask
+
+                print(y_hat.device)
+                print(y.device)
                 # latents_prev_rec = self.prev_step(noise_pred, t, latent_cur)
 
                 loss = nnf.mse_loss(y_hat, y)
