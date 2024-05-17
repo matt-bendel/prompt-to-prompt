@@ -496,7 +496,7 @@ class NullInversion:
     def null_optimization(self, y, num_inner_steps, epsilon):
         uncond_embeddings, cond_embeddings = self.context.chunk(2)
         uncond_embeddings_list = []
-        latent_cur = torch.randn(1, 4, 64, 64).to(device)
+        latent_cur = torch.randn(10, 4, 64, 64).to(device)
         bar = tqdm(total=num_inner_steps * NUM_DDIM_STEPS)
         with torch.no_grad():
             mask = torch.ones(y.shape).to(device)
@@ -580,6 +580,8 @@ class NullInversion:
         y = torch.from_numpy(image_gt).float() / 127.5 - 1
         y = y.permute(2, 0, 1).unsqueeze(0).to(device)
         y[:, :, 512 // 4:3 * 512 // 4, 512 // 4:3 * 512 // 4] = 0.  # y
+
+        y = y.repeat(10, 1, 1, 1)
 
         if verbose:
             print("DDIM inversion...")
