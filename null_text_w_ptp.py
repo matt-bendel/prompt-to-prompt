@@ -536,6 +536,7 @@ class NullInversion:
                 bar.update()
             uncond_embeddings_list.append(uncond_embeddings[:1].detach())
             with torch.no_grad():
+                context = torch.cat([uncond_embeddings, cond_embeddings])
                 latent_cur, noise_pred = self.get_noise_pred(latent_cur, t, False, context)
                 if i == NUM_DDIM_STEPS - 1:
                     latent_pred = 1 / 0.18215 * latent_cur
@@ -555,7 +556,6 @@ class NullInversion:
                     beta_prod_t = 1 - alpha_prod_t
                     latent_cur = latent_cur * alpha_prod_t ** 0.5 + beta_prod_t ** 0.5 * noise_pred
 
-                context = torch.cat([uncond_embeddings, cond_embeddings])
 
         bar.close()
         return uncond_embeddings_list, self.latent2image(latent_cur)
