@@ -537,13 +537,16 @@ class NullInversion:
             uncond_embeddings_list.append(uncond_embeddings[:1].detach())
             with torch.no_grad():
                 context = torch.cat([uncond_embeddings, cond_embeddings])
-                alpha_prod_t = self.scheduler.alphas_cumprod[t]
-                beta_prod_t = 1 - alpha_prod_t
+                latent_cur, noise_pred = self.get_noise_pred(latent_cur, t, False, context, True)
+
+                prev_timestep = t - self.scheduler.config.num_train_timesteps // self.scheduler.num_inference_steps
+                alpha_prod_t_prev = self.scheduler.alphas_cumprod[prev_timestep] if prev_timestep >= 0 else self.scheduler.final_alpha_cumprod
+                beta_prod_t_prev = 1 - alpha_prod_t_prev
 
                 if i == NUM_DDIM_STEPS - 1:
                     latent_pred = 1 / 0.18215 * latent_cur
                 else:
-                    latent_pred = (latent_cur - beta_prod_t ** 0.5 * noise_pred) / alpha_prod_t ** 0.5
+                    latent_pred = (latent_cur - beta_prod_t_prev ** 0.5 * noise_pred) / alpha_prod_t_prev ** 0.5
                     latent_pred = 1 / 0.18215 * latent_pred
 
                 image = self.model.vae.decode(latent_pred)['sample']
@@ -552,10 +555,7 @@ class NullInversion:
                 latent_cur = self.model.vae.encode(new_im)['latent_dist'].mean
                 latent_cur = latent_cur * 0.18215
                 if i < NUM_DDIM_STEPS - 1:
-                    latent_cur = latent_cur * alpha_prod_t ** 0.5 + beta_prod_t ** 0.5 * noise_pred
-
-                latent_cur, noise_pred = self.get_noise_pred(latent_cur, t, False, context, True)
-
+                    latent_cur = latent_cur * alpha_prod_t_prev ** 0.5 + beta_prod_t_prev ** 0.5 * noise_pred
 
         bar.close()
         return uncond_embeddings_list, self.latent2image(latent_cur)
@@ -675,8 +675,10 @@ prompts = [prompt]
 controller = AttentionStore()
 image_inv, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device), uncond_embeddings=uncond_embeddings, verbose=False, y=image_gt)
 image_inv2, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device), uncond_embeddings=uncond_embeddings, verbose=False, y=image_gt)
+image_inv3, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device), uncond_embeddings=uncond_embeddings, verbose=False, y=image_gt)
+image_inv4, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device), uncond_embeddings=uncond_embeddings, verbose=False, y=image_gt)
 
 print("showing from left to right: the ground truth image, the vq-autoencoder reconstruction, the null-text inverted image")
-ptp_utils.view_images([image_gt, image_enc, img_1, image_inv[0], image_inv2[0]])
+ptp_utils.view_images([image_gt, image_enc, img_1, image_inv[0], image_inv2[0], image_inv3[0], image_inv4[0]])
 
 exit()
