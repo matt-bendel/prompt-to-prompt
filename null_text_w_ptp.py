@@ -527,9 +527,11 @@ class NullInversion:
 
                 y_hat = image * mask
 
+                z0_hat = self.model.vae.encode(y + (1 - mask) * image)['latent_dist'].mean
+
                 # latents_prev_rec = self.prev_step(noise_pred, t, latent_cur)
 
-                loss = nnf.l1_loss(y_hat, y)
+                loss = nnf.mse_loss(y_hat, y) + 1e-1 * nnf.mse_loss(latent_pred, z0_hat)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -567,7 +569,7 @@ class NullInversion:
                 #     latent_cur = latent_pred * 0.18215
 
         bar.close()
-        return uncond_embeddings_list, self.latent2image(latent_cur)
+        return uncond_embeddings_list, self.latent2image(latent_cur[0].unsqueeze(0))
 
     def invert(self, image_path: str, prompt: str, offsets=(0, 0, 0, 0), num_inner_steps=10, early_stop_epsilon=1e-5,
                verbose=False):
