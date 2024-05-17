@@ -495,6 +495,8 @@ class NullInversion:
 
     def null_optimization(self, y, num_inner_steps, epsilon):
         uncond_embeddings, cond_embeddings = self.context.chunk(2)
+        print(uncond_embeddings.shape)
+        print(cond_embeddings.shape)
         uncond_embeddings_list = []
         latent_cur = torch.randn(10, 4, 64, 64).to(device)
         bar = tqdm(total=num_inner_steps * NUM_DDIM_STEPS)
@@ -582,10 +584,11 @@ class NullInversion:
         y[:, :, 512 // 4:3 * 512 // 4, 512 // 4:3 * 512 // 4] = 0.  # y
 
         y = y.repeat(10, 1, 1, 1)
+        print(y.shape)
 
-        if verbose:
-            print("DDIM inversion...")
-        _, ddim_latents = self.ddim_inversion(image_gt)
+        # if verbose:
+        #     print("DDIM inversion...")
+        # _, ddim_latents = self.ddim_inversion(image_gt)
         if verbose:
             print("Null-text optimization...")
         uncond_embeddings, im = self.null_optimization(y, num_inner_steps, early_stop_epsilon)
@@ -594,7 +597,7 @@ class NullInversion:
         image_rec = image_rec.cpu().permute(0, 2, 3, 1).numpy()[0]
         image_rec = (image_rec * 255).astype(np.uint8)
 
-        return (image_gt, image_rec, im), ddim_latents[-1], uncond_embeddings
+        return (image_gt, image_rec, im), None, uncond_embeddings
 
     def __init__(self, model):
         scheduler = DDIMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", clip_sample=False,
