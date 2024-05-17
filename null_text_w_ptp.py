@@ -524,6 +524,11 @@ class NullInversion:
                 optimizer.step()
                 loss_item = loss.item()
                 print(loss_item)
+                new_im = mask * y + (1 - mask) * image
+                self.model.vae.encode(new_im)
+                latent_cur = self.model.vae.encode(new_im)['latent_dist'].mean
+                latent_cur = latent_cur * 0.18215
+                latent_cur = latent_cur * alpha_prod_t ** 0.5 + beta_prod_t ** 0.5 * noise_pred
                 bar.update()
                 if loss_item < epsilon + i * 2e-5:
                     break
@@ -587,7 +592,8 @@ def text2image_ldm_stable(
         latent: Optional[torch.FloatTensor] = None,
         uncond_embeddings=None,
         start_time=50,
-        return_type='image'
+        return_type='image',
+        y=None
 ):
     batch_size = len(prompt)
     ptp_utils.register_attention_control(model, controller)
@@ -617,7 +623,7 @@ def text2image_ldm_stable(
             context = torch.cat([uncond_embeddings[i].expand(*text_embeddings.shape), text_embeddings])
         else:
             context = torch.cat([uncond_embeddings_, text_embeddings])
-        latents = ptp_utils.diffusion_step(model, controller, latents, context, t, guidance_scale, low_resource=False)
+        latents = ptp_utils.diffusion_step(model, controller, latents, context, t, guidance_scale, low_resource=False, y=y)
 
     if return_type == 'image':
         image = ptp_utils.latent2image(model.vae, latents)
@@ -627,7 +633,7 @@ def text2image_ldm_stable(
 
 
 def run_and_display(prompts, controller, latent=None, run_baseline=False, generator=None, uncond_embeddings=None,
-                    verbose=True):
+                    verbose=True, y=None):
     if run_baseline:
         print("w.o. prompt-to-prompt")
         images, latent = run_and_display(prompts, EmptyControl(), latent=latent, run_baseline=False,
@@ -635,7 +641,7 @@ def run_and_display(prompts, controller, latent=None, run_baseline=False, genera
         print("with prompt-to-prompt")
     images, x_t = text2image_ldm_stable(ldm_stable, prompts, controller, latent=latent,
                                         num_inference_steps=NUM_DDIM_STEPS, guidance_scale=GUIDANCE_SCALE,
-                                        generator=generator, uncond_embeddings=uncond_embeddings)
+                                        generator=generator, uncond_embeddings=uncond_embeddings, y=y)
     if verbose:
         ptp_utils.view_images(images)
     return images, x_t
@@ -648,8 +654,8 @@ print("Modify or remove offsets according to your image!")
 
 prompts = [prompt]
 controller = AttentionStore()
-image_inv, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device), uncond_embeddings=uncond_embeddings, verbose=False)
-image_inv2, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device), uncond_embeddings=uncond_embeddings, verbose=False)
+image_inv, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device), uncond_embeddings=uncond_embeddings, verbose=False, y=image_gt)
+image_inv2, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device), uncond_embeddings=uncond_embeddings, verbose=False, y=image_gt)
 
 print("showing from left to right: the ground truth image, the vq-autoencoder reconstruction, the null-text inverted image")
 ptp_utils.view_images([image_gt, image_enc, img_1, image_inv[0], image_inv2[0]])
