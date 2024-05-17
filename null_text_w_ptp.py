@@ -496,8 +496,9 @@ class NullInversion:
         uncond_embeddings_list = []
         latent_cur = torch.randn(1, 4, 64, 64).to(device)
         bar = tqdm(total=num_inner_steps * NUM_DDIM_STEPS)
-        mask = torch.ones(y.shape).to(device)
-        mask[:, :, 512 // 4:3 * 512 // 4, 512 // 4:3 * 512 // 4] = 0.
+        with torch.no_grad():
+            mask = torch.ones(y.shape).to(device)
+            mask[:, :, 512 // 4:3 * 512 // 4, 512 // 4:3 * 512 // 4] = 0.
 
         for i in range(NUM_DDIM_STEPS):
             print(i)
@@ -539,23 +540,23 @@ class NullInversion:
                 context = torch.cat([uncond_embeddings, cond_embeddings])
                 latent_cur, noise_pred = self.get_noise_pred(latent_cur, t, False, context, True)
 
-                prev_timestep = t - self.scheduler.config.num_train_timesteps // self.scheduler.num_inference_steps
-                alpha_prod_t_prev = self.scheduler.alphas_cumprod[prev_timestep] if prev_timestep >= 0 else self.scheduler.final_alpha_cumprod
-                beta_prod_t_prev = 1 - alpha_prod_t_prev
-
-                if i == NUM_DDIM_STEPS - 1:
-                    latent_pred = 1 / 0.18215 * latent_cur
-                else:
-                    latent_pred = (latent_cur - beta_prod_t_prev ** 0.5 * noise_pred) / alpha_prod_t_prev ** 0.5
-                    latent_pred = 1 / 0.18215 * latent_pred
-
-                image = self.model.vae.decode(latent_pred)['sample']
-
-                new_im = mask * y + (1 - mask) * image
-                latent_cur = self.model.vae.encode(new_im)['latent_dist'].mean
-                latent_cur = latent_cur * 0.18215
-                if i < NUM_DDIM_STEPS - 1:
-                    latent_cur = latent_cur * alpha_prod_t_prev ** 0.5 + beta_prod_t_prev ** 0.5 * noise_pred
+                # prev_timestep = t - self.scheduler.config.num_train_timesteps // self.scheduler.num_inference_steps
+                # alpha_prod_t_prev = self.scheduler.alphas_cumprod[prev_timestep] if prev_timestep >= 0 else self.scheduler.final_alpha_cumprod
+                # beta_prod_t_prev = 1 - alpha_prod_t_prev
+                #
+                # if i == NUM_DDIM_STEPS - 1:
+                #     latent_pred = 1 / 0.18215 * latent_cur
+                # else:
+                #     latent_pred = (latent_cur - beta_prod_t_prev ** 0.5 * noise_pred) / alpha_prod_t_prev ** 0.5
+                #     latent_pred = 1 / 0.18215 * latent_pred
+                #
+                # image = self.model.vae.decode(latent_pred)['sample']
+                #
+                # new_im = mask * y + (1 - mask) * image
+                # latent_cur = self.model.vae.encode(new_im)['latent_dist'].mean
+                # latent_cur = latent_cur * 0.18215
+                # if i < NUM_DDIM_STEPS - 1:
+                #     latent_cur = latent_cur * alpha_prod_t_prev ** 0.5 + beta_prod_t_prev ** 0.5 * noise_pred
 
         bar.close()
         return uncond_embeddings_list, self.latent2image(latent_cur)
