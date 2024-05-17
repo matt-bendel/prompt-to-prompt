@@ -443,6 +443,7 @@ class NullInversion:
                 image = image.permute(2, 0, 1).unsqueeze(0).to(device)
                 latents = self.model.vae.encode(image)['latent_dist'].mean
                 latents = latents * 0.18215
+        print(latents.shape)
         return latents
 
     @torch.no_grad()
@@ -525,6 +526,8 @@ class NullInversion:
         self.init_prompt(prompt)
         ptp_utils.register_attention_control(self.model, None)
         image_gt = load_512(image_path, *offsets)
+        # mask = torch.ones(image_gt.shape)
+
         if verbose:
             print("DDIM inversion...")
         image_rec, ddim_latents = self.ddim_inversion(image_gt)
@@ -622,6 +625,7 @@ image_inv, x_t = run_and_display(prompts, controller, run_baseline=False, latent
 print("showing from left to right: the ground truth image, the vq-autoencoder reconstruction, the null-text inverted image")
 ptp_utils.view_images([image_gt, image_enc, image_inv[0]])
 
+exit()
 prompts = ["a cat sitting next to a mirror",
            "a cat sitting next to a tree"
         ]
