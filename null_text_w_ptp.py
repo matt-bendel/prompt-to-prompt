@@ -495,8 +495,8 @@ class NullInversion:
 
     def null_optimization(self, y, num_inner_steps, epsilon):
         uncond_embeddings, cond_embeddings = self.context.chunk(2)
-        print(uncond_embeddings.shape)
-        print(cond_embeddings.shape)
+        uncond_embeddings = uncond_embeddings.repeat(y.shape[0], 1, 1)
+        cond_embeddings = cond_embeddings.repeat(y.shape[0], 1, 1)
         uncond_embeddings_list = []
         latent_cur = torch.randn(10, 4, 64, 64).to(device)
         bar = tqdm(total=num_inner_steps * NUM_DDIM_STEPS)
@@ -540,7 +540,7 @@ class NullInversion:
                     break
             for j in range(j + 1, num_inner_steps):
                 bar.update()
-            uncond_embeddings_list.append(uncond_embeddings[:1].detach())
+            uncond_embeddings_list.append(torch.mean(uncond_embeddings, dim=0).detach())
             with torch.no_grad():
                 context = torch.cat([uncond_embeddings, cond_embeddings])
                 latent_cur, noise_pred = self.get_noise_pred(latent_cur, t, False, context, True)
