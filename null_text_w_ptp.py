@@ -683,6 +683,12 @@ def text2image_ldm_stable(
 
     latent, latents = ptp_utils.init_latent(latent, model, height, width, generator, batch_size)
     model.scheduler.set_timesteps(num_inference_steps)
+
+    mask = torch.ones(y.shape).to(device)
+    mask[:, :, 512 // 4:3 * 512 // 4, 512 // 4:3 * 512 // 4] = 0.
+
+    y = y * mask
+
     for i, t in enumerate(tqdm(model.scheduler.timesteps[-start_time:])):
         if uncond_embeddings_ is None:
             context = torch.cat([uncond_embeddings[i].expand(*text_embeddings.shape), text_embeddings])
@@ -690,6 +696,36 @@ def text2image_ldm_stable(
             context = torch.cat([uncond_embeddings_, text_embeddings])
         latents = ptp_utils.diffusion_step(model, controller, latents, context, t, guidance_scale, low_resource=False,
                                            y=y)
+
+        latents_new = latents.detach()
+        latents_new.requires_grad = True
+
+        if i < num_inference_steps - 1:
+            alpha_prod_t = self.scheduler.alphas_cumprod[model.scheduler.timesteps[i + 1]]
+            beta_prod_t = 1 - alpha_prod_t
+            latent_pred = (latents_new - beta_prod_t ** 0.5 * noise_pred) / alpha_prod_t ** 0.5
+            latent_pred = 1 / 0.18215 * latent_pred
+        else:
+            latent_pred = 1 / 0.18215 * latents_new
+
+        image = model.vae.decode(latent_pred)['sample']
+
+        y_hat = image * mask
+
+        meas_error = 1e-1 * torch.linalg.norm(y - y_hat)
+
+        recon = y + (1 - mask) * image
+        latent_pred_glue = model.vae.encode(recon)['latent_dist'].mean
+
+        inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
+
+        psld_error = inpaint_error + meas_error
+
+        # print(latent_cur.requires_grad)
+        # print(y_hat.requires_grad)
+
+        gradients = torch.autograd.grad(psld_error, inputs=latents_new)[0]
+        latents = latents_new - gradients
 
     if return_type == 'image':
         image = ptp_utils.latent2image(model.vae, latents)
