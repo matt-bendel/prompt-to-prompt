@@ -550,7 +550,6 @@ class NullInversion:
             context = torch.cat([uncond_embeddings, cond_embeddings])
             latents_new, noise_pred = self.get_noise_pred(latent_cur, t, False, context, True)
             latents_new = latents_new.detach()
-
             latents_new.requires_grad = True
 
             if i < NUM_DDIM_STEPS - 1:
@@ -562,7 +561,6 @@ class NullInversion:
                 latent_pred = 1 / 0.18215 * latents_new
 
             image = self.model.vae.decode(latent_pred)['sample']
-            image.requires_grad = True
 
             y_hat = image * mask
 
