@@ -531,7 +531,7 @@ class NullInversion:
 
                 # latents_prev_rec = self.prev_step(noise_pred, t, latent_cur)
 
-                loss = nnf.mse_loss(y_hat, y) + 1e-1 * nnf.mse_loss(latent_pred, z0_hat)
+                loss = nnf.mse_loss(y_hat, y) + 1e-2 * nnf.mse_loss(latent_pred, z0_hat)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -571,7 +571,7 @@ class NullInversion:
         bar.close()
         return uncond_embeddings_list, self.latent2image(latent_cur[0].unsqueeze(0))
 
-    def invert(self, image_path: str, prompt: str, offsets=(0, 0, 0, 0), num_inner_steps=10, early_stop_epsilon=1e-5,
+    def invert(self, image_path: str, prompt: str, offsets=(0, 0, 0, 0), num_inner_steps=15, early_stop_epsilon=1e-5,
                verbose=False):
         self.init_prompt(prompt)
         ptp_utils.register_attention_control(self.model, None)
