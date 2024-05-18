@@ -529,11 +529,11 @@ class NullInversion:
 
                 # meas_error = torch.linalg.norm(y - y_hat)
 
-                z0_hat = self.model.vae.encode(mask * y + (1 - mask) * image)['latent_dist'].mean
+                # z0_hat = self.model.vae.encode(mask * y + (1 - mask) * image)['latent_dist'].mean
 
                 # latents_prev_rec = self.prev_step(noise_pred, t, latent_cur)
 
-                loss = torch.linalg.norm(latent_pred - z0_hat) #+ 1 * nnf.mse_loss(latent_pred, z0_hat)
+                loss = torch.linalg.norm(y_hat - y) #+ 1 * nnf.mse_loss(latent_pred, z0_hat)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
