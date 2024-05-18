@@ -79,7 +79,7 @@ def latent2image(vae, latents):
     latents = 1 / 0.18215 * latents
     image = vae.decode(latents)['sample']
     image = (image / 2 + 0.5).clamp(0, 1)
-    image = image.cpu().permute(0, 2, 3, 1).numpy()
+    image = image.detach().cpu().permute(0, 2, 3, 1).numpy()
     image = (image * 255).astype(np.uint8)
     return image
 
