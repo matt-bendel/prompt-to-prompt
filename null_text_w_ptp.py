@@ -566,10 +566,17 @@ class NullInversion:
 
             meas_error = 1e-1 * torch.linalg.norm(y - y_hat)
 
+            recon = y + (1 - mask) * image
+            latent_pred_glue = self.model.vae.encode(y + (1 - mask) * image)['latent_dist'].mean
+
+            inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
+
+            psld_error = inpaint_error + meas_error
+
             # print(latent_cur.requires_grad)
             # print(y_hat.requires_grad)
 
-            gradients = torch.autograd.grad(meas_error, inputs=latents_new)[0]
+            gradients = torch.autograd.grad(psld_error, inputs=latents_new)[0]
             latent_cur = latents_new - gradients
 
                 # prev_timestep = t - self.scheduler.config.num_train_timesteps // self.scheduler.num_inference_steps
