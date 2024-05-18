@@ -531,7 +531,7 @@ class NullInversion:
 
                 # latents_prev_rec = self.prev_step(noise_pred, t, latent_cur)
 
-                loss = nnf.mse_loss(y_hat, y) + 1e-2 * nnf.mse_loss(latent_pred, z0_hat)
+                loss = nnf.mse_loss(latent_pred, z0_hat)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
