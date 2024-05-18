@@ -694,7 +694,7 @@ def text2image_ldm_stable(
             context = torch.cat([uncond_embeddings[i].expand(*text_embeddings.shape), text_embeddings])
         else:
             context = torch.cat([uncond_embeddings_, text_embeddings])
-        latents = ptp_utils.diffusion_step(model, controller, latents, context, t, guidance_scale, low_resource=False,
+        latents, noise_pred = ptp_utils.diffusion_step(model, controller, latents, context, t, guidance_scale, low_resource=False,
                                            y=y)
 
         latents_new = latents.detach()
