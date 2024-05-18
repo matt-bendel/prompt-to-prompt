@@ -529,11 +529,11 @@ class NullInversion:
 
                 # meas_error = torch.linalg.norm(y - y_hat)
 
-                # z0_hat = self.model.vae.encode(y + (1 - mask) * image)['latent_dist'].mean
+                z0_hat = self.model.vae.encode(mask * y + (1 - mask) * image)['latent_dist'].mean
 
                 # latents_prev_rec = self.prev_step(noise_pred, t, latent_cur)
 
-                loss = torch.linalg.norm(y - y_hat) ** 2 #+ 1 * nnf.mse_loss(latent_pred, z0_hat)
+                loss = torch.linalg.norm(z0_hat - latent_pred) ** 2 #+ 1 * nnf.mse_loss(latent_pred, z0_hat)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -564,12 +564,12 @@ class NullInversion:
 
             y_hat = image * mask
 
-            meas_error = torch.linalg.norm(y - y_hat)
+            meas_error = 1e-1 * torch.linalg.norm(y - y_hat)
 
             recon = mask * y + (1 - mask) * image
             latent_pred_glue = self.model.vae.encode(recon)['latent_dist'].mean
 
-            inpaint_error = 1e-1 * torch.linalg.norm(latent_pred_glue - latent_pred)
+            inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
 
             psld_error = inpaint_error + meas_error
 
