@@ -527,11 +527,13 @@ class NullInversion:
 
                 y_hat = image * mask
 
+                meas_error = torch.linalg.norm(y - y_hat)
+
                 z0_hat = self.model.vae.encode(y + (1 - mask) * image)['latent_dist'].mean
 
                 # latents_prev_rec = self.prev_step(noise_pred, t, latent_cur)
 
-                loss = nnf.mse_loss(latent_pred, z0_hat)
+                loss = nnf.mse_loss(y_hat, y) #+ 1 * nnf.mse_loss(latent_pred, z0_hat)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -543,9 +545,23 @@ class NullInversion:
             for j in range(j + 1, num_inner_steps):
                 bar.update()
             uncond_embeddings_list.append(torch.mean(uncond_embeddings, dim=0).detach())
-            with torch.no_grad():
-                context = torch.cat([uncond_embeddings, cond_embeddings])
-                latent_cur, noise_pred = self.get_noise_pred(latent_cur, t, False, context, True)
+
+            context = torch.cat([uncond_embeddings, cond_embeddings])
+            latents_new, noise_pred = self.get_noise_pred(latent_cur, t, False, context, True)
+
+            alpha_prod_t = self.scheduler.alphas_cumprod[t]
+            beta_prod_t = 1 - alpha_prod_t
+            latent_pred = (latent_cur - beta_prod_t ** 0.5 * noise_pred) / alpha_prod_t ** 0.5
+            latent_pred = 1 / 0.18215 * latent_pred
+
+            image = self.model.vae.decode(latent_pred)['sample']
+
+            y_hat = image * mask
+
+            meas_error = 1e-1 * torch.linalg.norm(y - y_hat)
+
+            gradients = torch.autograd.grad(meas_error, inputs=latent_cur)[0]
+            latent_cur = latents_new - gradients
 
                 # prev_timestep = t - self.scheduler.config.num_train_timesteps // self.scheduler.num_inference_steps
                 # alpha_prod_t_prev = self.scheduler.alphas_cumprod[
