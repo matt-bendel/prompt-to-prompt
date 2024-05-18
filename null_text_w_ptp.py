@@ -684,6 +684,7 @@ def text2image_ldm_stable(
     latent, latents = ptp_utils.init_latent(latent, model, height, width, generator, batch_size)
     model.scheduler.set_timesteps(num_inference_steps)
 
+    y = y.unsqueeze(0)
     mask = torch.ones(y.shape).to(device)
     mask[:, :, 512 // 4:3 * 512 // 4, 512 // 4:3 * 512 // 4] = 0.
 
