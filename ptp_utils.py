@@ -61,7 +61,7 @@ def view_images(images, num_rows=1, offset_ratio=0.02):
     pil_img.save('tmp.jpg')
 
 
-def diffusion_step(model, controller, latents, context, t, guidance_scale, low_resource=False, y=False):
+def diffusion_step(model, controller, latents, context, t, guidance_scale, low_resource=False, y=False, nog=False):
     if low_resource:
         noise_pred_uncond = model.unet(latents, t, encoder_hidden_states=context[0])["sample"]
         noise_prediction_text = model.unet(latents, t, encoder_hidden_states=context[1])["sample"]
@@ -69,7 +69,12 @@ def diffusion_step(model, controller, latents, context, t, guidance_scale, low_r
         latents_input = torch.cat([latents] * 2)
         noise_pred = model.unet(latents_input, t, encoder_hidden_states=context)["sample"]
         noise_pred_uncond, noise_prediction_text = noise_pred.chunk(2)
-    noise_pred = noise_pred_uncond + guidance_scale * (noise_prediction_text - noise_pred_uncond)
+
+    if nog:
+        noise_pred = noise_pred_uncond
+    else:
+        noise_pred = noise_pred_uncond + guidance_scale * (noise_prediction_text - noise_pred_uncond)
+
     latents = model.scheduler.step(noise_pred, t, latents)["prev_sample"]
     latents = controller.step_callback(latents)
     return latents, noise_pred

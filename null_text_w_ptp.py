@@ -564,12 +564,12 @@ class NullInversion:
 
             meas_error = 1e-1 * torch.linalg.norm(y - y_hat)
 
-            recon = mask * y + (1 - mask) * image
-            latent_pred_glue = self.model.vae.encode(recon)['latent_dist'].mean
+            # recon = mask * y + (1 - mask) * image
+            # latent_pred_glue = self.model.vae.encode(recon)['latent_dist'].mean
 
-            inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
+            # inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
 
-            psld_error = inpaint_error + meas_error
+            psld_error = meas_error#inpaint_error + meas_error
 
             # print(latent_cur.requires_grad)
             # print(y_hat.requires_grad)
@@ -657,7 +657,8 @@ def text2image_ldm_stable(
         uncond_embeddings=None,
         start_time=50,
         return_type='image',
-        y=None
+        y=None,
+        nog=False
 ):
     batch_size = len(prompt)
     ptp_utils.register_attention_control(model, controller)
@@ -697,7 +698,7 @@ def text2image_ldm_stable(
         latents.requires_grad = True
         with torch.no_grad():
             new_latents, noise_pred = ptp_utils.diffusion_step(model, controller, latents, context, t, guidance_scale, low_resource=False,
-                                               y=y)
+                                               y=y, nog=nog)
 
 
         alpha_prod_t = model.scheduler.alphas_cumprod[t]
@@ -711,12 +712,12 @@ def text2image_ldm_stable(
 
         meas_error = 1e-1 * torch.linalg.norm(y - y_hat)
 
-        recon = y + (1 - mask) * image
-        latent_pred_glue = model.vae.encode(recon)['latent_dist'].mean
+        # recon = y + (1 - mask) * image
+        # latent_pred_glue = model.vae.encode(recon)['latent_dist'].mean
 
-        inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
+        # inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
 
-        psld_error = inpaint_error + meas_error
+        psld_error = meas_error #inpaint_error + meas_error
 
         # print(latent_cur.requires_grad)
         # print(y_hat.requires_grad)
@@ -733,7 +734,7 @@ def text2image_ldm_stable(
 
 
 def run_and_display(prompts, controller, latent=None, run_baseline=False, generator=None, uncond_embeddings=None,
-                    verbose=True, y=None):
+                    verbose=True, y=None, nog=False):
     if run_baseline:
         print("w.o. prompt-to-prompt")
         images, latent = run_and_display(prompts, EmptyControl(), latent=latent, run_baseline=False,
@@ -741,7 +742,7 @@ def run_and_display(prompts, controller, latent=None, run_baseline=False, genera
         print("with prompt-to-prompt")
     images, x_t = text2image_ldm_stable(ldm_stable, prompts, controller, latent=latent,
                                         num_inference_steps=NUM_DDIM_STEPS, guidance_scale=GUIDANCE_SCALE,
-                                        generator=generator, uncond_embeddings=uncond_embeddings, y=y)
+                                        generator=generator, uncond_embeddings=uncond_embeddings, y=y, nog=nog)
     if verbose:
         ptp_utils.view_images(images)
     return images, x_t
@@ -768,7 +769,7 @@ image_inv2, _ = run_and_display(prompts, controller, run_baseline=False, latent=
 image_inv3, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device),
                                 uncond_embeddings=uncond_embeddings, verbose=False, y=y)
 image_inv4, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device),
-                                uncond_embeddings=uncond_embeddings, verbose=False, y=y)
+                                uncond_embeddings=uncond_embeddings, verbose=False, y=y, nog=True)
 
 print(
     "showing from left to right: the ground truth image, the vq-autoencoder reconstruction, the null-text inverted image")
