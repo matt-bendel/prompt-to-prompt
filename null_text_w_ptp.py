@@ -548,6 +548,7 @@ class NullInversion:
 
             context = torch.cat([uncond_embeddings, cond_embeddings])
             latents_new, noise_pred = self.get_noise_pred(latent_cur, t, False, context, True)
+            latents_new.requires_grad = True
 
             alpha_prod_t = self.scheduler.alphas_cumprod[t]
             beta_prod_t = 1 - alpha_prod_t
