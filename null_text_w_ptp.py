@@ -684,7 +684,6 @@ def text2image_ldm_stable(
     latent, latents = ptp_utils.init_latent(latent, model, height, width, generator, batch_size)
     model.scheduler.set_timesteps(num_inference_steps)
 
-    y = y.unsqueeze(0)
     mask = torch.ones(y.shape).to(device)
     mask[:, :, 512 // 4:3 * 512 // 4, 512 // 4:3 * 512 // 4] = 0.
 
@@ -759,14 +758,19 @@ print("Modify or remove offsets according to your image!")
 
 prompts = [prompt]
 controller = AttentionStore()
+
+y = torch.from_numpy(image_gt).float() / 127.5 - 1
+y = y.permute(2, 0, 1).unsqueeze(0).to(device)
+y[:, :, 512 // 4:3 * 512 // 4, 512 // 4:3 * 512 // 4] = 0.
+
 image_inv, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device),
-                               uncond_embeddings=uncond_embeddings, verbose=False, y=image_gt)
+                               uncond_embeddings=uncond_embeddings, verbose=False, y=y)
 image_inv2, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device),
-                                uncond_embeddings=uncond_embeddings, verbose=False, y=image_gt)
+                                uncond_embeddings=uncond_embeddings, verbose=False, y=y)
 image_inv3, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device),
-                                uncond_embeddings=uncond_embeddings, verbose=False, y=image_gt)
+                                uncond_embeddings=uncond_embeddings, verbose=False, y=y)
 image_inv4, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device),
-                                uncond_embeddings=uncond_embeddings, verbose=False, y=image_gt)
+                                uncond_embeddings=uncond_embeddings, verbose=False, y=y)
 
 print(
     "showing from left to right: the ground truth image, the vq-autoencoder reconstruction, the null-text inverted image")
