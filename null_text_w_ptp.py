@@ -549,17 +549,13 @@ class NullInversion:
             # with torch.no_grad():
             context = torch.cat([uncond_embeddings, cond_embeddings])
             latents_new, noise_pred = self.get_noise_pred(latent_cur, t, False, context, True)
-            latents_new = latents_new.detach()
-            latents_new.requires_grad = True
 
-            prev_timestep = t - self.scheduler.config.num_train_timesteps // self.scheduler.num_inference_steps
-            alpha_prod_t= self.scheduler.alphas_cumprod[
-                prev_timestep] if prev_timestep >= 0 else self.scheduler.final_alpha_cumprod
+            alpha_prod_t = self.scheduler.alphas_cumprod[t]
             beta_prod_t = 1 - alpha_prod_t
 
-            alpha_prod_t = self.scheduler.alphas_cumprod[self.model.scheduler.timesteps[i + 1]]
-            beta_prod_t = 1 - alpha_prod_t
-            latent_pred = (latents_new - beta_prod_t ** 0.5 * noise_pred) / alpha_prod_t ** 0.5
+            latent_cur = latent_cur.detach()
+            latent_cur.requires_grad = True
+            latent_pred = (latent_cur - beta_prod_t ** 0.5 * noise_pred) / alpha_prod_t ** 0.5
             latent_pred = 1 / 0.18215 * latent_pred
 
             image = self.model.vae.decode(latent_pred)['sample']
@@ -578,7 +574,7 @@ class NullInversion:
             # print(latent_cur.requires_grad)
             # print(y_hat.requires_grad)
 
-            gradients = torch.autograd.grad(psld_error, inputs=latents_new)[0]
+            gradients = torch.autograd.grad(psld_error, inputs=latent_cur)[0]
             latent_cur = latents_new - gradients
             latent_cur = latent_cur.detach()
 
@@ -697,20 +693,15 @@ def text2image_ldm_stable(
             context = torch.cat([uncond_embeddings[i].expand(*text_embeddings.shape), text_embeddings])
         else:
             context = torch.cat([uncond_embeddings_, text_embeddings])
+        old_latents = latents.detach()
+        old_latents.requires_grad = True
         latents, noise_pred = ptp_utils.diffusion_step(model, controller, latents, context, t, guidance_scale, low_resource=False,
                                            y=y)
 
-        latents_new = latents.detach()
-        latents_new.requires_grad = True
 
-        prev_timestep = t - model.scheduler.config.num_train_timesteps // model.scheduler.num_inference_steps
-        alpha_prod_t = model.scheduler.alphas_cumprod[
-            prev_timestep] if prev_timestep >= 0 else model.scheduler.final_alpha_cumprod
+        alpha_prod_t = model.scheduler.alphas_cumprod[t]
         beta_prod_t = 1 - alpha_prod_t
-
-        alpha_prod_t = model.scheduler.alphas_cumprod[model.scheduler.timesteps[i + 1]]
-        beta_prod_t = 1 - alpha_prod_t
-        latent_pred = (latents_new - beta_prod_t ** 0.5 * noise_pred) / alpha_prod_t ** 0.5
+        latent_pred = (old_latents - beta_prod_t ** 0.5 * noise_pred) / alpha_prod_t ** 0.5
         latent_pred = 1 / 0.18215 * latent_pred
 
         image = model.vae.decode(latent_pred)['sample']
@@ -729,7 +720,7 @@ def text2image_ldm_stable(
         # print(latent_cur.requires_grad)
         # print(y_hat.requires_grad)
 
-        gradients = torch.autograd.grad(psld_error, inputs=latents_new)[0]
+        gradients = torch.autograd.grad(psld_error, inputs=old_latents)[0]
         latents = latents_new - gradients
 
     if return_type == 'image':
