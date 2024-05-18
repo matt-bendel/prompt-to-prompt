@@ -552,10 +552,13 @@ class NullInversion:
 
             latents_new.requires_grad = True
 
-            alpha_prod_t = self.scheduler.alphas_cumprod[t]
-            beta_prod_t = 1 - alpha_prod_t
-            latent_pred = (latent_cur - beta_prod_t ** 0.5 * noise_pred) / alpha_prod_t ** 0.5
-            latent_pred = 1 / 0.18215 * latent_pred
+            if i < NUM_DDIM_STEPS - 1:
+                alpha_prod_t = self.scheduler.alphas_cumprod[self.model.scheduler.timesteps[i + 1]]
+                beta_prod_t = 1 - alpha_prod_t
+                latent_pred = (latents_new - beta_prod_t ** 0.5 * noise_pred) / alpha_prod_t ** 0.5
+                latent_pred = 1 / 0.18215 * latent_pred
+            else:
+                latent_pred = 1 / 0.18215 * latents_new
 
             image = self.model.vae.decode(latent_pred)['sample']
 
