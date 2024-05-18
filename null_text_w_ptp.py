@@ -567,7 +567,7 @@ class NullInversion:
             meas_error = 1e-1 * torch.linalg.norm(y - y_hat)
 
             recon = y + (1 - mask) * image
-            latent_pred_glue = self.model.vae.encode(y + (1 - mask) * image)['latent_dist'].mean
+            latent_pred_glue = self.model.vae.encode(recon)['latent_dist'].mean
 
             inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
 
