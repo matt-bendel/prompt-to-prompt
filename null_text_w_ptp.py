@@ -549,6 +549,7 @@ class NullInversion:
             # with torch.no_grad():
             context = torch.cat([uncond_embeddings, cond_embeddings])
             latents_new, noise_pred = self.get_noise_pred(latent_cur, t, False, context, True)
+            latents_new = latents_new.detach()
 
             latents_new.requires_grad = True
 
