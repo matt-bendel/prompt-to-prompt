@@ -728,9 +728,9 @@ def text2image_ldm_stable(
         latents = latents_new - gradients
 
     if return_type == 'image':
-        image = ptp_utils.latent2image(model.vae, latents)
+        image = ptp_utils.latent2image(model.vae, latents.detach())
     else:
-        image = latents
+        image = latents.detach()
     return image, latent
 
 
