@@ -529,7 +529,7 @@ class NullInversion:
 
                 # meas_error = torch.linalg.norm(y - y_hat)
 
-                z0_hat = self.model.vae.encode(mask * y + (1 - mask) * image)['latent_dist'].mean
+                # z0_hat = self.model.vae.encode(mask * y + (1 - mask) * image)['latent_dist'].mean
 
                 # latents_prev_rec = self.prev_step(noise_pred, t, latent_cur)
 
@@ -564,10 +564,10 @@ class NullInversion:
 
             meas_error = 1e-1 * torch.linalg.norm(y - y_hat)
 
-            recon = mask * y + (1 - mask) * image
-            latent_pred_glue = self.model.vae.encode(recon)['latent_dist'].mean
+            # recon = mask * y + (1 - mask) * image
+            # latent_pred_glue = self.model.vae.encode(recon)['latent_dist'].mean
 
-            inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
+            # inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
 
             psld_error = meas_error #inpaint_error + meas_error
 
@@ -710,10 +710,10 @@ def text2image_ldm_stable(
 
         meas_error = 1e-1 * torch.linalg.norm(y - y_hat)
 
-        recon = y + (1 - mask) * image
-        latent_pred_glue = model.vae.encode(recon)['latent_dist'].mean
+        # recon = y + (1 - mask) * image
+        # latent_pred_glue = model.vae.encode(recon)['latent_dist'].mean
 
-        inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
+        # inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
 
         psld_error = meas_error#inpaint_error + meas_error
 
