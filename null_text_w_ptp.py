@@ -693,15 +693,16 @@ def text2image_ldm_stable(
             context = torch.cat([uncond_embeddings[i].expand(*text_embeddings.shape), text_embeddings])
         else:
             context = torch.cat([uncond_embeddings_, text_embeddings])
-        old_latents = latents.detach()
-        old_latents.requires_grad = True
-        latents, noise_pred = ptp_utils.diffusion_step(model, controller, latents, context, t, guidance_scale, low_resource=False,
-                                           y=y)
+        latents = latents.detach()
+        latents.requires_grad = True
+        with torch.no_grad():
+            new_latents, noise_pred = ptp_utils.diffusion_step(model, controller, latents, context, t, guidance_scale, low_resource=False,
+                                               y=y)
 
 
         alpha_prod_t = model.scheduler.alphas_cumprod[t]
         beta_prod_t = 1 - alpha_prod_t
-        latent_pred = (old_latents - beta_prod_t ** 0.5 * noise_pred) / alpha_prod_t ** 0.5
+        latent_pred = (latents - beta_prod_t ** 0.5 * noise_pred) / alpha_prod_t ** 0.5
         latent_pred = 1 / 0.18215 * latent_pred
 
         image = model.vae.decode(latent_pred)['sample']
@@ -720,9 +721,9 @@ def text2image_ldm_stable(
         # print(latent_cur.requires_grad)
         # print(y_hat.requires_grad)
 
-        gradients = torch.autograd.grad(psld_error, inputs=old_latents)[0]
-        latents = latents - gradients
-        del old_latents
+        gradients = torch.autograd.grad(psld_error, inputs=latents)[0]
+        latents = new_latents - gradients
+        latents = latents.detach()
 
     if return_type == 'image':
         image = ptp_utils.latent2image(model.vae, latents.detach())
