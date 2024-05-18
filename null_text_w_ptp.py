@@ -533,7 +533,7 @@ class NullInversion:
 
                 # latents_prev_rec = self.prev_step(noise_pred, t, latent_cur)
 
-                loss = torch.linalg.norm(z0_hat - latent_pred) #+ 1 * nnf.mse_loss(latent_pred, z0_hat)
+                loss = torch.linalg.norm(y_hat - y) #+ 1 * nnf.mse_loss(latent_pred, z0_hat)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -573,13 +573,13 @@ class NullInversion:
 
             inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
 
-            psld_error = inpaint_error + meas_error
+            psld_error = meas_error #inpaint_error + meas_error
 
             # print(latent_cur.requires_grad)
             # print(y_hat.requires_grad)
 
             gradients = torch.autograd.grad(psld_error, inputs=latents_new)[0]
-            latent_cur = latents_new #- gradients
+            latent_cur = latents_new - gradients
             latent_cur = latent_cur.detach()
 
                 # prev_timestep = t - self.scheduler.config.num_train_timesteps // self.scheduler.num_inference_steps
@@ -724,7 +724,7 @@ def text2image_ldm_stable(
 
         inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
 
-        psld_error = meas_error #inpaint_error + meas_error
+        psld_error = meas_error#inpaint_error + meas_error
 
         # print(latent_cur.requires_grad)
         # print(y_hat.requires_grad)
