@@ -566,7 +566,7 @@ class NullInversion:
 
             meas_error = 1e-1 * torch.linalg.norm(y - y_hat)
 
-            recon = y + (1 - mask) * image
+            recon = mask * y + (1 - mask) * image
             latent_pred_glue = self.model.vae.encode(recon)['latent_dist'].mean
 
             inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
@@ -701,7 +701,7 @@ def text2image_ldm_stable(
         latents_new.requires_grad = True
 
         if i < num_inference_steps - 1:
-            alpha_prod_t = self.scheduler.alphas_cumprod[model.scheduler.timesteps[i + 1]]
+            alpha_prod_t = model.scheduler.alphas_cumprod[model.scheduler.timesteps[i + 1]]
             beta_prod_t = 1 - alpha_prod_t
             latent_pred = (latents_new - beta_prod_t ** 0.5 * noise_pred) / alpha_prod_t ** 0.5
             latent_pred = 1 / 0.18215 * latent_pred
