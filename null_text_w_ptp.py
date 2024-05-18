@@ -533,7 +533,7 @@ class NullInversion:
 
                 # latents_prev_rec = self.prev_step(noise_pred, t, latent_cur)
 
-                loss = torch.linalg.norm(z0_hat - latent_pred) ** 2 #+ 1 * nnf.mse_loss(latent_pred, z0_hat)
+                loss = torch.linalg.norm(z0_hat - latent_pred) #+ 1 * nnf.mse_loss(latent_pred, z0_hat)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -577,7 +577,7 @@ class NullInversion:
             # print(y_hat.requires_grad)
 
             gradients = torch.autograd.grad(psld_error, inputs=latents_new)[0]
-            latent_cur = latents_new - gradients
+            latent_cur = latents_new #- gradients
 
                 # prev_timestep = t - self.scheduler.config.num_train_timesteps // self.scheduler.num_inference_steps
                 # alpha_prod_t_prev = self.scheduler.alphas_cumprod[
