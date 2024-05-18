@@ -646,7 +646,7 @@ class NullInversion:
 null_inversion = NullInversion(ldm_stable)
 
 
-@torch.no_grad()
+# @torch.no_grad()
 def text2image_ldm_stable(
         model,
         prompt: List[str],
