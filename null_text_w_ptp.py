@@ -564,12 +564,12 @@ class NullInversion:
 
             meas_error = 1e-1 * torch.linalg.norm(y - y_hat)
 
-            # recon = mask * y + (1 - mask) * image
-            # latent_pred_glue = self.model.vae.encode(recon)['latent_dist'].mean
+            recon = mask * y + (1 - mask) * image
+            latent_pred_glue = self.model.vae.encode(recon)['latent_dist'].mean
 
-            # inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
+            inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
 
-            psld_error = meas_error #inpaint_error + meas_error
+            psld_error = inpaint_error + meas_error
 
             # print(latent_cur.requires_grad)
             # print(y_hat.requires_grad)
@@ -602,7 +602,7 @@ class NullInversion:
         bar.close()
         return uncond_embeddings_list, self.latent2image(latent_cur[0].unsqueeze(0))
 
-    def invert(self, image_path: str, prompt: str, offsets=(0, 0, 0, 0), num_inner_steps=1, early_stop_epsilon=1e-5,
+    def invert(self, image_path: str, prompt: str, offsets=(0, 0, 0, 0), num_inner_steps=10, early_stop_epsilon=1e-5,
                verbose=False):
         self.init_prompt(prompt)
         ptp_utils.register_attention_control(self.model, None)
@@ -711,12 +711,12 @@ def text2image_ldm_stable(
 
         meas_error = 1e-1 * torch.linalg.norm(y - y_hat)
 
-        # recon = y + (1 - mask) * image
-        # latent_pred_glue = model.vae.encode(recon)['latent_dist'].mean
+        recon = y + (1 - mask) * image
+        latent_pred_glue = model.vae.encode(recon)['latent_dist'].mean
 
-        # inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
+        inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
 
-        psld_error = meas_error#inpaint_error + meas_error
+        psld_error = inpaint_error + meas_error
 
         # print(latent_cur.requires_grad)
         # print(y_hat.requires_grad)
