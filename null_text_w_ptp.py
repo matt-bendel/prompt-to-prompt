@@ -575,7 +575,7 @@ class NullInversion:
             # print(y_hat.requires_grad)
 
             gradients = torch.autograd.grad(psld_error, inputs=latent_cur)[0]
-            latent_cur = latents_new - 1e-1* gradients
+            latent_cur = latents_new - gradients
             latent_cur = latent_cur.detach()
 
                 # prev_timestep = t - self.scheduler.config.num_train_timesteps // self.scheduler.num_inference_steps
@@ -602,7 +602,7 @@ class NullInversion:
         bar.close()
         return uncond_embeddings_list, self.latent2image(latent_cur[0].unsqueeze(0))
 
-    def invert(self, image_path: str, prompt: str, offsets=(0, 0, 0, 0), num_inner_steps=1, early_stop_epsilon=1e-5,
+    def invert(self, image_path: str, prompt: str, offsets=(0, 0, 0, 0), num_inner_steps=10, early_stop_epsilon=1e-5,
                verbose=False):
         self.init_prompt(prompt)
         ptp_utils.register_attention_control(self.model, None)
@@ -723,7 +723,7 @@ def text2image_ldm_stable(
         # print(y_hat.requires_grad)
 
         gradients = torch.autograd.grad(psld_error, inputs=latents)[0]
-        latents = new_latents - 1e-1 * gradients
+        latents = new_latents - gradients
         latents = latents.detach()
 
     if return_type == 'image':
