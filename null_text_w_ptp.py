@@ -15,7 +15,7 @@ scheduler = DDIMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="sca
                           set_alpha_to_one=False)
 MY_TOKEN = ''
 LOW_RESOURCE = False
-NUM_DDIM_STEPS = 500
+NUM_DDIM_STEPS = 999
 GUIDANCE_SCALE = 7.5
 MAX_NUM_WORDS = 77
 device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
