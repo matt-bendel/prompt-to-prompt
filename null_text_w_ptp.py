@@ -569,7 +569,7 @@ class NullInversion:
 
             # inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
 
-            psld_error = meas_error#inpaint_error + meas_error
+            psld_error = 1e-2 * meas_error#inpaint_error + meas_error
 
             # print(latent_cur.requires_grad)
             # print(y_hat.requires_grad)
@@ -717,7 +717,7 @@ def text2image_ldm_stable(
 
         # inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
 
-        psld_error = meas_error #inpaint_error + meas_error
+        psld_error = 1e-2 * meas_error #inpaint_error + meas_error
 
         # print(latent_cur.requires_grad)
         # print(y_hat.requires_grad)
