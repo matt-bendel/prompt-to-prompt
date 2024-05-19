@@ -15,7 +15,7 @@ scheduler = DDIMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="sca
                           set_alpha_to_one=False)
 MY_TOKEN = ''
 LOW_RESOURCE = False
-NUM_DDIM_STEPS = 1000
+NUM_DDIM_STEPS = 500
 GUIDANCE_SCALE = 7.5
 MAX_NUM_WORDS = 77
 device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
@@ -650,7 +650,7 @@ def text2image_ldm_stable(
         model,
         prompt: List[str],
         controller,
-        num_inference_steps: int = 1000,
+        num_inference_steps: int = 500,
         guidance_scale: Optional[float] = 7.5,
         generator: Optional[torch.Generator] = None,
         latent: Optional[torch.FloatTensor] = None,
