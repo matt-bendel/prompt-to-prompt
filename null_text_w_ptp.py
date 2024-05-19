@@ -749,7 +749,7 @@ def run_and_display(prompts, controller, latent=None, run_baseline=False, genera
 
 
 image_path = "./example_images/gnochi_mirror.jpeg"
-prompt = "a cat"
+prompt = ""
 (image_gt, image_enc, img_1), x_t, uncond_embeddings = null_inversion.invert(image_path, prompt, offsets=(0, 0, 200, 0),
                                                                              verbose=True)
 
