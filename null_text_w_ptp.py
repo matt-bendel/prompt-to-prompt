@@ -569,7 +569,7 @@ class NullInversion:
 
             # inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
 
-            psld_error = 1e-1 * meas_error#inpaint_error + meas_error
+            psld_error = 5e-2 * meas_error#inpaint_error + meas_error
 
             # print(latent_cur.requires_grad)
             # print(y_hat.requires_grad)
@@ -717,7 +717,7 @@ def text2image_ldm_stable(
 
         # inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
 
-        psld_error = 1e-1 * meas_error #inpaint_error + meas_error
+        psld_error = 5e-2 * meas_error #inpaint_error + meas_error
 
         # print(latent_cur.requires_grad)
         # print(y_hat.requires_grad)
@@ -769,7 +769,7 @@ image_inv2, _ = run_and_display(prompts, controller, run_baseline=False, latent=
 image_inv3, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device),
                                 uncond_embeddings=uncond_embeddings, verbose=False, y=y)
 image_inv4, _ = run_and_display(prompts, controller, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device),
-                                uncond_embeddings=uncond_embeddings, verbose=False, y=y, nog=True)
+                                uncond_embeddings=None, verbose=False, y=y, nog=True)
 
 print(
     "showing from left to right: the ground truth image, the vq-autoencoder reconstruction, the null-text inverted image")
