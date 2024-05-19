@@ -416,7 +416,7 @@ class NullInversion:
         guidance_scale = 1 if is_forward else GUIDANCE_SCALE
         noise_pred = self.model.unet(latents_input, t, encoder_hidden_states=context)["sample"]
         noise_pred_uncond, noise_prediction_text = noise_pred.chunk(2)
-        noise_pred = noise_prediction_text + guidance_scale * (noise_pred_uncond - noise_prediction_text)
+        noise_pred = noise_pred_uncond + guidance_scale * (noise_prediction_text - noise_pred_uncond)
         if is_forward:
             latents = self.next_step(noise_pred, t, latents)
         else:
@@ -516,7 +516,7 @@ class NullInversion:
                 noise_pred_cond = self.get_noise_pred_single(latent_cur, t, cond_embeddings)
             for j in range(num_inner_steps):
                 noise_pred_uncond = self.get_noise_pred_single(latent_cur, t, uncond_embeddings)
-                noise_pred = noise_pred_cond + GUIDANCE_SCALE * (noise_pred_uncond - noise_pred_cond)
+                noise_pred = noise_pred_uncond + GUIDANCE_SCALE * (noise_pred_cond - noise_pred_uncond)
 
                 alpha_prod_t = self.scheduler.alphas_cumprod[t]
                 beta_prod_t = 1 - alpha_prod_t
@@ -749,7 +749,7 @@ def run_and_display(prompts, controller, latent=None, run_baseline=False, genera
 
 
 image_path = "./example_images/gnochi_mirror.jpeg"
-prompt = ""
+prompt = "A cat"
 (image_gt, image_enc, img_1), x_t, uncond_embeddings = null_inversion.invert(image_path, prompt, offsets=(0, 0, 200, 0),
                                                                              verbose=True)
 
