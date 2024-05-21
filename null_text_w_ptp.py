@@ -712,18 +712,18 @@ def text2image_ldm_stable(
 
         meas_error = torch.linalg.norm(y - y_hat)
 
-        # recon = y + (1 - mask) * image
-        # latent_pred_glue = model.vae.encode(recon)['latent_dist'].mean
+        recon = mask * y + (1 - mask) * image
+        latent_pred_glue = model.vae.encode(recon)['latent_dist'].mean
 
-        # inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
+        inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
 
-        psld_error = meas_error #inpaint_error + meas_error
+        psld_error = 1e-2 * inpaint_error + 1e-1 * meas_error
 
         # print(latent_cur.requires_grad)
         # print(y_hat.requires_grad)
 
-        gradients = torch.autograd.grad(psld_error, inputs=latents)[0]
-        latents = new_latents - (1 / meas_error.detach()) * gradients
+        gradients = torch.autograd.grad(outputs=psld_error, inputs=latents)[0]
+        latents = new_latents - gradients
         latents = latents.detach()
 
     if return_type == 'image':
