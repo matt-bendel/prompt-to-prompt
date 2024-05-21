@@ -687,7 +687,7 @@ def text2image_ldm_stable(
     mask = torch.ones(y.shape).to(device)
     mask[:, :, 512 // 4:3 * 512 // 4, 512 // 4:3 * 512 // 4] = 0.
 
-    y = y * mask + torch.randn_like(y, device=y.device) * 0.05
+    y = y * mask
 
     for i, t in enumerate(tqdm(model.scheduler.timesteps[-start_time:])):
         if uncond_embeddings_ is None:
@@ -708,7 +708,7 @@ def text2image_ldm_stable(
 
         image = model.vae.decode(latent_pred)['sample']
 
-        y_hat = image * mask + torch.randn_like(image, device=image.device) * 0.05
+        y_hat = image * mask
 
         meas_error = torch.linalg.norm(y - y_hat)
 
