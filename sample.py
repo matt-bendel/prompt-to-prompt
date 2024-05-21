@@ -681,11 +681,6 @@ def text2image_ldm_stable(
     latent, latents = ptp_utils.init_latent(latent, model, height, width, generator, batch_size)
     model.scheduler.set_timesteps(num_inference_steps)
 
-    mask = torch.ones(y.shape).to(device)
-    mask[:, :, 512 // 4:3 * 512 // 4, 512 // 4:3 * 512 // 4] = 0.
-
-    y = y * mask
-
     for i, t in enumerate(tqdm(model.scheduler.timesteps[-start_time:])):
         if uncond_embeddings_ is None:
             context = torch.cat([uncond_embeddings[i].expand(*text_embeddings.shape), text_embeddings])
@@ -700,6 +695,10 @@ def text2image_ldm_stable(
             latents = new_latents  # - gradients
             latents = latents.detach()
         else:
+            mask = torch.ones(y.shape).to(device)
+            mask[:, :, 512 // 4:3 * 512 // 4, 512 // 4:3 * 512 // 4] = 0.
+
+            y = y * mask
             alpha_prod_t = model.scheduler.alphas_cumprod[t]
             beta_prod_t = 1 - alpha_prod_t
             latent_pred = (latents - beta_prod_t ** 0.5 * noise_pred) / alpha_prod_t ** 0.5
