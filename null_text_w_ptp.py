@@ -753,7 +753,7 @@ prompt = ""
 (image_gt, image_enc, img_1), x_t, uncond_embeddings = null_inversion.invert(image_path, prompt, offsets=(0, 0, 200, 0),
                                                                              verbose=True)
 
-print(uncond_embeddings.shape)
+print(uncond_embeddings[0].shape)
 print("Modify or remove offsets according to your image!")
 
 prompts = [prompt]
