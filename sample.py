@@ -15,7 +15,7 @@ scheduler = DDIMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="sca
                           set_alpha_to_one=False)
 MY_TOKEN = ''
 LOW_RESOURCE = False
-NUM_DDIM_STEPS = 50
+NUM_DDIM_STEPS = 1000
 GUIDANCE_SCALE = 7.5
 MAX_NUM_WORDS = 77
 device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
@@ -649,12 +649,12 @@ null_inversion = NullInversion(ldm_stable)
 def text2image_ldm_stable(
         model,
         prompt: List[str],
-        num_inference_steps: int = 50,
+        num_inference_steps: int = 1000,
         guidance_scale: Optional[float] = 7.5,
         generator: Optional[torch.Generator] = None,
         latent: Optional[torch.FloatTensor] = None,
         uncond_embeddings=None,
-        start_time=50,
+        start_time=1000,
         return_type='image',
         y=None
 ):
@@ -732,7 +732,7 @@ def run_and_display(prompts, latent=None, run_baseline=False, generator=None, un
                     verbose=True, guidance=GUIDANCE_SCALE, y=None):
     images, x_t = text2image_ldm_stable(ldm_stable, prompts, latent=latent,
                                         num_inference_steps=NUM_DDIM_STEPS, guidance_scale=guidance,
-                                        generator=generator, uncond_embeddings=uncond_embeddings, y=y)
+                                        generator=generator, uncond_embeddings=uncond_embeddings, start_time=NUM_DDIM_STEPS, y=y)
     if verbose:
         ptp_utils.view_images(images)
     return images, x_t
