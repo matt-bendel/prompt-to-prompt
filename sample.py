@@ -732,7 +732,7 @@ def run_and_display(prompts, latent=None, run_baseline=False, generator=None, un
                     verbose=True, guidance=GUIDANCE_SCALE, y=None):
     images, x_t = text2image_ldm_stable(ldm_stable, prompts, latent=latent,
                                         num_inference_steps=NUM_DDIM_STEPS, guidance_scale=guidance,
-                                        generator=generator, uncond_embeddings=uncond_embeddings, start_time=NUM_DDIM_STEPS, y=y)
+                                        generator=generator, uncond_embeddings=uncond_embeddings, start_time=NUM_DDIM_STEPS - 1, y=y)
     if verbose:
         ptp_utils.view_images(images)
     return images, x_t
