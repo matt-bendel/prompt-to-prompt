@@ -452,7 +452,7 @@ def text2image_ldm_stable(
             psld_error = meas_error #inpaint_error + meas_error
 
             gradients = torch.autograd.grad(psld_error, inputs=latents)[0]
-            latents = new_latents - 1e-1 * gradients
+            latents = new_latents - 5e-1 * gradients
             latents = latents.detach()
 
     if return_type == 'image':
