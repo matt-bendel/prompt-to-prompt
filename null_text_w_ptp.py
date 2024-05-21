@@ -15,7 +15,7 @@ scheduler = DDIMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="sca
                           set_alpha_to_one=False)
 MY_TOKEN = ''
 LOW_RESOURCE = False
-NUM_DDIM_STEPS = 999
+NUM_DDIM_STEPS = 50
 GUIDANCE_SCALE = 7.5
 MAX_NUM_WORDS = 77
 device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
@@ -509,7 +509,7 @@ class NullInversion:
             print(i)
             uncond_embeddings = uncond_embeddings.clone().detach()
             uncond_embeddings.requires_grad = True
-            optimizer = Adam([uncond_embeddings], lr=1e-2 * (1. - i / 1000.))
+            optimizer = Adam([uncond_embeddings], lr=1e-2 * (1. - i / 50.))
             # latent_prev = latents[len(latents) - i - 2]
             t = self.model.scheduler.timesteps[i]
             with torch.no_grad():
@@ -655,7 +655,7 @@ def text2image_ldm_stable(
         generator: Optional[torch.Generator] = None,
         latent: Optional[torch.FloatTensor] = None,
         uncond_embeddings=None,
-        start_time=1000,
+        start_time=50,
         return_type='image',
         y=None,
         nog=False
