@@ -491,7 +491,7 @@ image_rec = (image_rec * 255).astype(np.uint8)
 image_inv, _ = run_and_display(prompts, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device),
                                uncond_embeddings=None, verbose=False, guidance=0, y=y)
 image_inv2, _ = run_and_display(prompts, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device),
-                                uncond_embeddings=None, verbose=False, guidance=0)
+                                uncond_embeddings=None, verbose=False, guidance=GUIDANCE_SCALE)
 
 ptp_utils.view_images([image_gt, image_rec, image_inv[0], image_inv2[0]])
 
