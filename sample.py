@@ -649,7 +649,7 @@ null_inversion = NullInversion(ldm_stable)
 def text2image_ldm_stable(
         model,
         prompt: List[str],
-        num_inference_steps: int = 500,
+        num_inference_steps: int = 50,
         guidance_scale: Optional[float] = 7.5,
         generator: Optional[torch.Generator] = None,
         latent: Optional[torch.FloatTensor] = None,
@@ -680,10 +680,10 @@ def text2image_ldm_stable(
     latent, latents = ptp_utils.init_latent(latent, model, height, width, generator, batch_size)
     model.scheduler.set_timesteps(num_inference_steps)
 
-    mask = torch.ones(y.shape).to(device)
-    mask[:, :, 512 // 4:3 * 512 // 4, 512 // 4:3 * 512 // 4] = 0.
+    # mask = torch.ones(y.shape).to(device)
+    # mask[:, :, 512 // 4:3 * 512 // 4, 512 // 4:3 * 512 // 4] = 0.
 
-    y = y * mask
+    # y = y * mask
 
     for i, t in enumerate(tqdm(model.scheduler.timesteps[-start_time:])):
         if uncond_embeddings_ is None:
@@ -729,24 +729,19 @@ def text2image_ldm_stable(
 
 
 def run_and_display(prompts, latent=None, run_baseline=False, generator=None, uncond_embeddings=None,
-                    verbose=True, y=None, nog=False):
-    if run_baseline:
-        print("w.o. prompt-to-prompt")
-        images, latent = run_and_display(prompts, latent=latent, run_baseline=False,
-                                         generator=generator)
-        print("with prompt-to-prompt")
+                    verbose=True, guidance=GUIDANCE_SCALE):
     images, x_t = text2image_ldm_stable(ldm_stable, prompts, latent=latent,
-                                        num_inference_steps=NUM_DDIM_STEPS, guidance_scale=GUIDANCE_SCALE,
+                                        num_inference_steps=NUM_DDIM_STEPS, guidance_scale=guidance,
                                         generator=generator, uncond_embeddings=uncond_embeddings)
     if verbose:
         ptp_utils.view_images(images)
     return images, x_t
 
 
-prompts = [prompt]
+prompts = ['A cat']
 
 image_inv, _ = run_and_display(prompts, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device),
-                               uncond_embeddings=None, verbose=False)
+                               uncond_embeddings=None, verbose=False, guidance=0)
 image_inv2, _ = run_and_display(prompts, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device),
                                 uncond_embeddings=None, verbose=False)
 
