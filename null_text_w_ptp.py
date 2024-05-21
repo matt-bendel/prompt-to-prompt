@@ -723,7 +723,7 @@ def text2image_ldm_stable(
         # print(y_hat.requires_grad)
 
         gradients = torch.autograd.grad(outputs=psld_error, inputs=latents)[0]
-        latents = new_latents - gradients
+        latents = new_latents - (1 / meas_error.detach()) * gradients
         latents = latents.detach()
 
     if return_type == 'image':
