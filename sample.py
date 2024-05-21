@@ -575,7 +575,7 @@ class NullInversion:
             # print(y_hat.requires_grad)
 
             gradients = torch.autograd.grad(psld_error, inputs=latent_cur)[0]
-            latent_cur = latents_new - (1 / meas_error.detach()) * gradients
+            latent_cur = latents_new - 1e-1 * gradients
             latent_cur = latent_cur.detach()
 
                 # prev_timestep = t - self.scheduler.config.num_train_timesteps // self.scheduler.num_inference_steps
