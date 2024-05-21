@@ -656,6 +656,7 @@ def text2image_ldm_stable(
         uncond_embeddings=None,
         start_time=50,
         return_type='image',
+        y=None
 ):
     batch_size = len(prompt)
     height = width = 512
@@ -690,36 +691,36 @@ def text2image_ldm_stable(
             context = torch.cat([uncond_embeddings[i].expand(*text_embeddings.shape), text_embeddings])
         else:
             context = torch.cat([uncond_embeddings_, text_embeddings])
-        # latents = latents.detach()
-        # latents.requires_grad = True
+        latents = latents.detach()
+        latents.requires_grad = True
         with torch.no_grad():
             new_latents, noise_pred = ptp_utils.diffusion_step_new(model, latents, context, t, guidance_scale, low_resource=False)
 
+        if y is None:
+            latents = new_latents  # - gradients
+            latents = latents.detach()
+        else:
+            alpha_prod_t = model.scheduler.alphas_cumprod[t]
+            beta_prod_t = 1 - alpha_prod_t
+            latent_pred = (latents - beta_prod_t ** 0.5 * noise_pred) / alpha_prod_t ** 0.5
+            latent_pred = 1 / 0.18215 * latent_pred
 
-        # alpha_prod_t = model.scheduler.alphas_cumprod[t]
-        # beta_prod_t = 1 - alpha_prod_t
-        # latent_pred = (latents - beta_prod_t ** 0.5 * noise_pred) / alpha_prod_t ** 0.5
-        # latent_pred = 1 / 0.18215 * latent_pred
-        #
-        # image = model.vae.decode(latent_pred)['sample']
-        #
-        # y_hat = image * mask
-        #
-        # meas_error = torch.linalg.norm(y - y_hat)
+            image = model.vae.decode(latent_pred)['sample']
 
-        # recon = y + (1 - mask) * image
-        # latent_pred_glue = model.vae.encode(recon)['latent_dist'].mean
+            y_hat = image * mask
 
-        # inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
+            meas_error = torch.linalg.norm(y - y_hat)
 
-        # psld_error = meas_error #inpaint_error + meas_error
+            # recon = y + (1 - mask) * image
+            # latent_pred_glue = model.vae.encode(recon)['latent_dist'].mean
 
-        # print(latent_cur.requires_grad)
-        # print(y_hat.requires_grad)
+            # inpaint_error = torch.linalg.norm(latent_pred_glue - latent_pred)
 
-        # gradients = torch.autograd.grad(psld_error, inputs=latents)[0]
-        latents = new_latents #- gradients
-        # latents = latents.detach()
+            psld_error = meas_error #inpaint_error + meas_error
+
+            gradients = torch.autograd.grad(psld_error, inputs=latents)[0]
+            latents = new_latents - gradients
+            latents = latents.detach()
 
     if return_type == 'image':
         image = ptp_utils.latent2image(model.vae, latents.detach())
@@ -729,21 +730,16 @@ def text2image_ldm_stable(
 
 
 def run_and_display(prompts, latent=None, run_baseline=False, generator=None, uncond_embeddings=None,
-                    verbose=True, guidance=GUIDANCE_SCALE):
+                    verbose=True, guidance=GUIDANCE_SCALE, y=None):
     images, x_t = text2image_ldm_stable(ldm_stable, prompts, latent=latent,
                                         num_inference_steps=NUM_DDIM_STEPS, guidance_scale=guidance,
-                                        generator=generator, uncond_embeddings=uncond_embeddings)
+                                        generator=generator, uncond_embeddings=uncond_embeddings, y=y)
     if verbose:
         ptp_utils.view_images(images)
     return images, x_t
 
 
 prompts = ['A cat']
-
-image_inv, _ = run_and_display(prompts, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device),
-                               uncond_embeddings=None, verbose=False, guidance=0)
-image_inv2, _ = run_and_display(prompts, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device),
-                                uncond_embeddings=None, verbose=False)
 
 print(
     "showing from left to right: the ground truth image, the vq-autoencoder reconstruction, the null-text inverted image")
@@ -755,11 +751,14 @@ y = torch.from_numpy(image_gt).float() / 127.5 - 1
 y = y.permute(2, 0, 1).unsqueeze(0).to(device)
 y[:, :, 512 // 4:3 * 512 // 4, 512 // 4:3 * 512 // 4] = 0.  # y
 
-y = y.repeat(2, 1, 1, 1)
-
 image_rec = (y / 2 + 0.5).clamp(0, 1)
 image_rec = image_rec.cpu().permute(0, 2, 3, 1).numpy()[0]
 image_rec = (image_rec * 255).astype(np.uint8)
+
+image_inv, _ = run_and_display(prompts, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device),
+                               uncond_embeddings=None, verbose=False, guidance=0, y=y)
+image_inv2, _ = run_and_display(prompts, run_baseline=False, latent=torch.randn(1, 4, 64, 64).to(device),
+                                uncond_embeddings=None, verbose=False, guidance=0)
 
 ptp_utils.view_images([image_gt, image_rec, image_inv[0], image_inv2[0]])
 
